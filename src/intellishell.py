@@ -8,6 +8,30 @@ from prompt_toolkit.shortcuts import prompt
 from prompt_toolkit.history import InMemoryHistory
 from prompt_toolkit.formatted_text import HTML
 
+# Список команд для обработки автодополнения вывода списка директорий и файлов
+commands = (
+    'ls ',
+    'cat ',
+    'stat ',
+    'nano ',
+    'vim ',
+    'mcedit '
+)
+
+# Функция для получения списка директорий
+def get_directories(path):
+    try:
+        return [d for d in os.listdir(path) if os.path.isdir(os.path.join(path, d))]
+    except FileNotFoundError:
+        return []
+
+# Функция для получения списка файлов и директорий
+def get_files_and_dir(path):
+    try:
+        return os.listdir(path)
+    except FileNotFoundError:
+        return []
+
 class HistoryCompleter(Completer):
     def __init__(self, history):
         self.history = history
@@ -18,7 +42,7 @@ class HistoryCompleter(Completer):
 
         if not text:
             return
-        
+      
         # Логика автодополнения для команды cd
         if text.startswith('cd '):
             # Извлекаем запрос (удаляем команду cd и лишние пробелы по краям)
@@ -29,13 +53,6 @@ class HistoryCompleter(Completer):
                 path_to_complete = text_suffix
             else:
                 path_to_complete = os.path.join(os.getcwd(), text_suffix)
-
-            # Функция для получения списка директорий
-            def get_directories(path):
-                try:
-                    return [d for d in os.listdir(path) if os.path.isdir(os.path.join(path, d))]
-                except FileNotFoundError:
-                    return []
 
             # Проверяем, нужно ли показывать содержимое директории или использовать автоматическое дополнение
             if text_suffix.endswith('/'):
@@ -51,6 +68,36 @@ class HistoryCompleter(Completer):
                     if d.startswith(partial_name):
                         full_path = os.path.join(base_path, d)
                         yield Completion(f'cd {full_path}', start_position=-len(text), display=HTML(f'<green>{d}</green>'))
+
+        # Логика автодополнения для команды чтения
+        elif any(text.startswith(cmd) for cmd in commands):
+            command = text.split()[0]
+            text_suffix = text[len(command):].strip()
+
+            if text_suffix.startswith('/'):
+                path_to_complete = text_suffix
+            else:
+                path_to_complete = os.path.join(os.getcwd(), text_suffix)
+
+            if text_suffix.endswith('/'):
+                files_and_dirs = get_files_and_dir(path_to_complete)
+                for entry in files_and_dirs:
+                    full_path = os.path.join(path_to_complete, entry)
+                    if os.path.isdir(full_path):
+                        yield Completion(f'{command} {full_path}', start_position=-len(text), display=HTML(f'<green>{entry}/</green>'))
+                    else:
+                        yield Completion(f'{command} {full_path}', start_position=-len(text), display=HTML(f'<cyan>{entry}</cyan>'))
+            else:
+                base_path = os.path.dirname(path_to_complete)
+                partial_name = os.path.basename(path_to_complete)
+                files_and_dirs = get_files_and_dir(base_path)
+                for entry in files_and_dirs:
+                    if entry.startswith(partial_name):
+                        full_path = os.path.join(base_path, entry)
+                        if os.path.isdir(full_path):
+                            yield Completion(f'{command} {full_path}', start_position=-len(text), display=HTML(f'<green>{entry}/</green>'))
+                        else:
+                            yield Completion(f'{command} {full_path}', start_position=-len(text), display=HTML(f'<cyan>{entry}</cyan>'))
         
         # Фильтрация истории команд по введенному тексту
         else:
@@ -84,13 +131,14 @@ def execute_command(cmd, history, history_file):
 
     # Фиксируем время запуска
     start_time = time.time()
+
     # Запуск выполнения команды в отдельном процессе
     process = subprocess.Popen(cmd, shell=True, preexec_fn=os.setsid)
-    
+
     # Ожидание завершения процесса
     try:
         process.wait()
-    # Обработка прерывания выполнения процесса (его принудительное завершение)
+    # Обработка прерывания выполняемого процесса (принудительное завершение)
     except KeyboardInterrupt:
         print("")
         os.killpg(os.getpgid(process.pid), signal.SIGTERM)
@@ -118,6 +166,7 @@ def main():
     
     # Создание объекта истории ввода
     session_history = InMemoryHistory()
+
     # Создание объекта автодополнения с историей команд
     completer = HistoryCompleter(history)
 
@@ -132,7 +181,7 @@ def main():
             time_str = f"[{last_execution_time:.3f}s]" if last_execution_time else "[0.000s]"
 
             # Красим строку перед вводом команды
-            prompt_str = HTML(f'<ansicyan>{current_dir}</ansicyan> <pink>{time_str}</pink> <green> > </green>')
+            prompt_str = HTML(f'<ansicyan>{current_dir}</ansicyan> <pink>{time_str}</pink><green> > </green>')
 
             # Запрос ввода от пользователя с автодополнением и историей
             user_input = prompt(
