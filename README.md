@@ -1,4 +1,4 @@
-# aBash
+# autoBash
 
 This is a shell that runs on top of Bash and implements an auto-completion mechanism using a drop-down list.
 
