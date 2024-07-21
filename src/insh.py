@@ -7,6 +7,7 @@ from prompt_toolkit.completion import Completer, Completion
 from prompt_toolkit.shortcuts import prompt
 from prompt_toolkit.history import InMemoryHistory
 from prompt_toolkit.formatted_text import HTML
+from prompt_toolkit.key_binding import KeyBindings
 
 # Список команд для обработки автодополнения вывода списка директорий и файлов
 commands = (
@@ -34,6 +35,7 @@ def get_files_and_dir(path):
 
 class HistoryCompleter(Completer):
     def __init__(self, history):
+        # Читаем историю команд
         self.history = history
 
     def get_completions(self, document, complete_event):
@@ -59,7 +61,7 @@ class HistoryCompleter(Completer):
                 dirs = get_directories(path_to_complete)
                 for d in dirs:
                     full_path = os.path.join(path_to_complete, d)
-                    yield Completion(f'cd {full_path}', start_position=-len(text), display=HTML(f'<green>{d}</green>'))
+                    yield Completion(f'cd {full_path}', start_position=-len(text), display=HTML(f'<green>{d}</green>'), display_meta='Directory')
             else:
                 base_path = os.path.dirname(path_to_complete)
                 partial_name = os.path.basename(path_to_complete)
@@ -67,7 +69,7 @@ class HistoryCompleter(Completer):
                 for d in dirs:
                     if d.startswith(partial_name):
                         full_path = os.path.join(base_path, d)
-                        yield Completion(f'cd {full_path}', start_position=-len(text), display=HTML(f'<green>{d}</green>'))
+                        yield Completion(f'cd {full_path}', start_position=-len(text), display=HTML(f'<green>{d}</green>'), display_meta='Directory')
 
         # Логика автодополнения для команды чтения
         elif any(text.startswith(cmd) for cmd in commands):
@@ -84,9 +86,9 @@ class HistoryCompleter(Completer):
                 for entry in files_and_dirs:
                     full_path = os.path.join(path_to_complete, entry)
                     if os.path.isdir(full_path):
-                        yield Completion(f'{command} {full_path}', start_position=-len(text), display=HTML(f'<green>{entry}/</green>'))
+                        yield Completion(f'{command} {full_path}', start_position=-len(text), display=HTML(f'<green>{entry}/</green>'), display_meta='Directory')
                     else:
-                        yield Completion(f'{command} {full_path}', start_position=-len(text), display=HTML(f'<cyan>{entry}</cyan>'))
+                        yield Completion(f'{command} {full_path}', start_position=-len(text), display=HTML(f'<cyan>{entry}</cyan>'), display_meta='File')
             else:
                 base_path = os.path.dirname(path_to_complete)
                 partial_name = os.path.basename(path_to_complete)
@@ -95,9 +97,9 @@ class HistoryCompleter(Completer):
                     if entry.startswith(partial_name):
                         full_path = os.path.join(base_path, entry)
                         if os.path.isdir(full_path):
-                            yield Completion(f'{command} {full_path}', start_position=-len(text), display=HTML(f'<green>{entry}/</green>'))
+                            yield Completion(f'{command} {full_path}', start_position=-len(text), display=HTML(f'<green>{entry}/</green>'), display_meta='Directory')
                         else:
-                            yield Completion(f'{command} {full_path}', start_position=-len(text), display=HTML(f'<cyan>{entry}</cyan>'))
+                            yield Completion(f'{command} {full_path}', start_position=-len(text), display=HTML(f'<cyan>{entry}</cyan>'), display_meta='File')
         
         # Фильтрация истории команд по введенному тексту
         else:
@@ -172,6 +174,16 @@ def main():
 
     last_execution_time = 0
 
+    # Переопределяем действие клавишы удаления текста (Backspace)
+    bindings = KeyBindings()
+    @bindings.add('backspace')
+    def _(event):
+        buffer = event.app.current_buffer
+        # Удаляем один симвод перед курсором в текущем буфере ввода
+        buffer.delete_before_cursor(1)
+        # Запускаем автодополнение по содержимому буфера (аналогично нажатию Tab)
+        buffer.start_completion()
+
     while True:
         try:
             # Получение текущего рабочего каталога
@@ -187,7 +199,9 @@ def main():
             user_input = prompt(
                 prompt_str,
                 completer=completer,
-                history=session_history
+                history=session_history,
+                # Передать обработчик нажатий клавиш
+                key_bindings=bindings
             )
             
             # Выход из цикла при вводе 'exit'
