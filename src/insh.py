@@ -103,11 +103,30 @@ class HistoryCompleter(Completer):
         
         # Фильтрация истории команд по введенному тексту
         else:
-            # Поиск в истории по всем словам (проверяем наличие всех слов в строке не зависимо от их положения)
-            words = text.split()
-            for entry in self.history:
-                if all(word in entry.lower() for word in words):
-                    yield Completion(entry, start_position=-len(text))
+            # Фильтрация с использованием Regex для опредиления текст в начале или конце строки с соблюдением положения
+            regex_start = document.text.startswith('^')
+            regex_end = document.text.endswith('$')
+
+            if regex_start:
+                # Убираем '^' из начала текста
+                text = text[1:]
+                for entry in self.history:
+                    # Опускаем регистр (lower()) в условии для фильтрации
+                    if entry.lower().startswith(text):
+                        yield Completion(entry, start_position=-len(document.text))
+            elif regex_end:
+                # Убираем '$' из конца текста
+                text = text[:-1]
+                for entry in self.history:
+                    if entry.lower().endswith(text):
+                        yield Completion(entry, start_position=-len(document.text))
+            
+            # Фильтрация без Regex (проверяем наличие всех слов в строке не зависимо от их положения)
+            else:
+                words = text.split()
+                for entry in self.history:
+                    if all(word in entry.lower() for word in words):
+                        yield Completion(entry, start_position=-len(text))
         
 # Функция для добавления команды в историю
 def add_to_history(cmd, history, history_file):
@@ -187,7 +206,7 @@ def main():
         # Запускаем автодополнение по содержимому буфера (аналогично нажатию Tab)
         buffer.start_completion()
 
-    # С помощью Right выбираем команду из списка без ее выполнения и для перехода к следующей директории с выводом автодополнения
+    # Выбор команды с помощью стрелочки Right без ее выполнения или для перехода к следующей директории с выводом автодополнения
     @bindings.add('right')
     def _(event):
         buffer = event.app.current_buffer
