@@ -1,4 +1,5 @@
 import os
+import re
 import subprocess
 import signal
 import time
@@ -8,6 +9,9 @@ from prompt_toolkit.shortcuts import prompt
 from prompt_toolkit.history import InMemoryHistory
 from prompt_toolkit.formatted_text import HTML
 from prompt_toolkit.key_binding import KeyBindings
+
+# Интерпритатор по умолчанию
+SHELL = '/bin/bash'
 
 # Список команд для обработки автодополнения вывода списка директорий и файлов
 commands = (
@@ -19,6 +23,14 @@ commands = (
     'mcedit '
 )
 
+# Функция добавления команды в историю
+def add_to_history(cmd, history, history_file):
+    if cmd not in history:
+        history.append(cmd)
+        with open(history_file, 'a') as f:
+            # Запись команды в файл истории
+            f.write(cmd + '\n')
+
 # Функция для получения списка директорий
 def get_directories(path):
     try:
@@ -26,7 +38,7 @@ def get_directories(path):
     except FileNotFoundError:
         return []
 
-# Функция для получения списка файлов и директорий
+# Функция для получения списка директорий и файлов
 def get_files_and_dir(path):
     try:
         return os.listdir(path)
@@ -47,6 +59,35 @@ def get_exec_commands():
                     commands.add(filename)
     return sorted(commands)
 
+# Фиксируем переменные системного окружения при запуске
+env = os.environ.copy()
+
+# Функция обновления переменных текущего окружения при соблюдении условий регулярных выражений
+def env_update(cmd, env):
+    # Фиксируем статус ответа, что переменная не найдена
+    updated = "__none__"
+
+    # Регулярное выражение для поиска исполняемых переменных через $()
+    dynamic_pattern = re.compile(r'^([^-\s=]+)=\$\((.*?)\)$', re.IGNORECASE)
+    matches = dynamic_pattern.findall(cmd)
+    # Обновляем переменные
+    for var, value in matches:
+        # Удаляем $() в начале и конце строки
+        cleaned_value = re.sub(r'^\$\(\s*|\s*\)$', '', value)
+        env[var] = cleaned_value
+        # Возвращаем название (ключ) переменной
+        updated = var
+
+    # Регулярное выражение для поиска статических переменных
+    static_pattern = re.compile(r'^([^-\s=]+)=([^=\s\`${]{1,}.*)$', re.IGNORECASE)
+    matches = static_pattern.findall(cmd)
+    # Обновляем переменные с последующим завершением основной функции
+    for var, value in matches:
+        env[var] = value
+        updated = "__static__"
+
+    return updated
+
 class HistoryCompleter(Completer):
     def __init__(self, history):
         # Читаем историю команд
@@ -56,6 +97,7 @@ class HistoryCompleter(Completer):
         # Фиксируем текущий текст в поле ввода и опускаем регистр
         text = document.text.lower()
 
+        # Ничего не делаем, если текст пустой
         if not text:
             return
       
@@ -70,7 +112,7 @@ class HistoryCompleter(Completer):
             else:
                 path_to_complete = os.path.join(os.getcwd(), text_suffix)
 
-            # Проверяем, нужно ли показывать содержимое директории или использовать автоматическое дополнение
+            # Определяем, нужно ли показывать содержимое директории (/) или использовать автоматическое дополнение
             if text_suffix.endswith('/'):
                 dirs = get_directories(path_to_complete)
                 for d in dirs:
@@ -85,7 +127,7 @@ class HistoryCompleter(Completer):
                         full_path = os.path.join(base_path, d)
                         yield Completion(f'cd {full_path}/', start_position=-len(text), display=HTML(f'<green>{d}</green>'), display_meta='Directory')
 
-        # Логика автодополнения для команды чтения
+        # Логика автодополнения для команды чтения (cat и других)
         elif any(text.startswith(cmd) for cmd in commands):
             command = text.split()[0]
             text_suffix = text[len(command):].strip()
@@ -118,17 +160,25 @@ class HistoryCompleter(Completer):
         # Логика автодополнения для поиска исполняемых команд через "!"
         elif text.startswith('!'):
             command_prefix = text[1:].strip()
-            # Получаем список команд
             self.commands = get_exec_commands()
             for cmd in self.commands:
                 if cmd.startswith(command_prefix):
                     yield Completion(cmd, start_position=-len(command_prefix)-1, display=HTML(f'<cyan>{cmd}</cyan>'), display_meta='Command')
-            
+
+        # Логика вывода списка переменных "$" (ищем символ в любой части строки)
+        elif '$' in text:
+            # Забираем текст после последнего символа "$"
+            var = text.split('$')[-1].strip()
+            for key in env.keys():
+                if key.lower().startswith(var.lower()):
+                    yield Completion(f'{key}', start_position=-len(var), display=HTML(f'<cyan>{key}</cyan>'), display_meta='Variable')
+    
+        
         # Фильтрация истории команд по введенному тексту
         else:
             # Фильтрация с использованием Regex для опредиления текст в начале или конце строки с соблюдением положения
             regex_start = document.text.startswith('^')
-            regex_end = document.text.endswith('$')
+            regex_end = document.text.endswith('^')
 
             if regex_start:
                 # Убираем '^' из начала текста
@@ -137,34 +187,27 @@ class HistoryCompleter(Completer):
                     # Опускаем регистр (lower()) в условии для фильтрации
                     if entry.lower().startswith(text):
                         yield Completion(entry, start_position=-len(document.text))
+                        
             elif regex_end:
-                # Убираем '$' из конца текста
+                # Убираем '^' из конца текста
                 text = text[:-1]
                 for entry in self.history:
                     if entry.lower().endswith(text):
                         yield Completion(entry, start_position=-len(document.text))
             
-            # Фильтрация без Regex (проверяем наличие всех слов в строке не зависимо от их положения)
+            # Фильтрация без Regex (проверяем наличие всех словосочетаний в строке не зависимо от их положения)
             else:
                 words = text.split()
                 for entry in self.history:
                     if all(word in entry.lower() for word in words):
                         yield Completion(entry, start_position=-len(text))
         
-# Функция для добавления команды в историю
-def add_to_history(cmd, history, history_file):
-    if cmd not in history:
-        history.append(cmd)
-        with open(history_file, 'a') as f:
-            # Запись команды в файл истории
-            f.write(cmd + '\n')
-
-# Функция для выполнения команды
+# Функция выполнения команды
 def execute_command(cmd, history, history_file):
     # Добавляем команду в историю перед выполнением
     add_to_history(cmd, history, history_file)
     
-    # Обработка команды 'cd' в текущем процессе
+    # Обработка команды 'cd' в текущем процессе Python
     if cmd.startswith('cd '):
         try:
             target_dir = cmd[2:].strip()
@@ -172,13 +215,49 @@ def execute_command(cmd, history, history_file):
         except Exception as e:
             print(f"Incorrect path")
         return
+    
+    # Имитируем обработку присвоения переменных
+    env_type = env_update(cmd, env)
+    
+    # Если переменная является статической, обновляем ее в функции и завершаем эту
+    if env_type == "__static__":
+        return
+
+    # Если переменная динамическая
+    elif env_type != "__none__" and env_type != "__static__":
+        # Забираем значение переменной по ключу
+        value_from_key = env.get(env_type, "")
+        if value_from_key:
+            try:
+                result = subprocess.run(
+                    [SHELL, '-c', value_from_key],
+                    env=env,
+                    check=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True
+                )
+                # Забираем вывод успешного выполнения (stdout) и обновляем переменную по ключу
+                cleaned_value = result.stdout.strip()
+                env[env_type] = cleaned_value
+            except subprocess.CalledProcessError as e:
+                # В случае ошибки выводим ее на экран
+                print(f"Error execut command '{value_from_key}': {e.stderr}")
+        return
 
     # Фиксируем время запуска
     start_time = time.time()
 
-    # Запуск выполнения команды в отдельном процессе
-    process = subprocess.Popen(cmd, shell=True, preexec_fn=os.setsid)
+    # Выполнить команду в системе (не дает возможность передать переменные)
+    # os.system(f'/bin/bash -c "{cmd}"')
 
+    # Запуск выполнения команды в отдельном процессе с указанием интерпритатора и передачей переменных
+    process = subprocess.Popen(
+        [SHELL, '-c', cmd],
+        env=env,
+        preexec_fn=os.setsid
+    )
+    
     # Ожидание завершения процесса
     try:
         process.wait()
@@ -187,16 +266,15 @@ def execute_command(cmd, history, history_file):
         print("")
         os.killpg(os.getpgid(process.pid), signal.SIGTERM)
         process.wait()
-    
+
     # Фиксируем время завершения
     end_time = time.time()
     execution_time = end_time - start_time
     return execution_time
 
-
 def main():
+    # Читаем историю и проверяем, что файл существует
     history_file = os.path.expanduser('~/.bash_history')
-    # Проверка, что файл истории команд существует
     if not os.path.exists(history_file):
         print(f"Command history file not found: {history_file}")
         return
@@ -214,13 +292,13 @@ def main():
     # Создание объекта автодополнения с историей команд
     completer = HistoryCompleter(history)
 
-    # Значение по умолчанию
+    # Значение времени выполнения команды по умолчанию
     last_execution_time = 0
 
     # Переопределяем действия нажатия клавиш
     bindings = KeyBindings()
 
-    # Обновления вывода автодополнения при удалении текста с помощью Backspace
+    # Обновление вывода автодополнения при удалении текста с помощью Backspace
     @bindings.add('backspace')
     def _(event):
         buffer = event.app.current_buffer
@@ -243,6 +321,7 @@ def main():
             # Перемещаем курсор на одну позицию вперед
             buffer.cursor_position += 1
 
+    # Основной цикл обработки
     while True:
         try:
             # Получение текущего рабочего каталога
@@ -254,7 +333,7 @@ def main():
             # Красим строку перед вводом команды
             prompt_str = HTML(f'<ansicyan>{current_dir}</ansicyan> <pink>{time_str}</pink><green> > </green>')
 
-            # Запрос ввода от пользователя с автодополнением и историей
+            # Запрос ввода от пользователя с автодополнением
             user_input = prompt(
                 prompt_str,
                 completer=completer,
