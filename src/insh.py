@@ -33,6 +33,20 @@ def get_files_and_dir(path):
     except FileNotFoundError:
         return []
 
+# Функция для получения списка команд
+def get_exec_commands():
+    commands = set()
+    # Получаем список всех директорий из переменной PATH
+    path_dirs = os.environ.get('PATH', '').split(os.pathsep)
+    # Ищем все исполняемые файлы (X_OK) в текущей директории и их подкаталогах
+    for directory in path_dirs:
+        if os.path.isdir(directory):
+            for filename in os.listdir(directory):
+                full_path = os.path.join(directory, filename)
+                if os.path.isfile(full_path) and os.access(full_path, os.X_OK):
+                    commands.add(filename)
+    return sorted(commands)
+
 class HistoryCompleter(Completer):
     def __init__(self, history):
         # Читаем историю команд
@@ -100,7 +114,16 @@ class HistoryCompleter(Completer):
                             yield Completion(f'{command} {full_path}/', start_position=-len(text), display=HTML(f'<green>{entry}</green>'), display_meta='Directory')
                         else:
                             yield Completion(f'{command} {full_path}', start_position=-len(text), display=HTML(f'<cyan>{entry}</cyan>'), display_meta='File')
-        
+
+        # Логика автодополнения для поиска исполняемых команд через "!"
+        elif text.startswith('!'):
+            command_prefix = text[1:].strip()
+            # Получаем список команд
+            self.commands = get_exec_commands()
+            for cmd in self.commands:
+                if cmd.startswith(command_prefix):
+                    yield Completion(cmd, start_position=-len(command_prefix)-1, display=HTML(f'<cyan>{cmd}</cyan>'), display_meta='Command')
+            
         # Фильтрация истории команд по введенному тексту
         else:
             # Фильтрация с использованием Regex для опредиления текст в начале или конце строки с соблюдением положения
