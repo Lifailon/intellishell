@@ -23,29 +23,45 @@ commands = (
     'mcedit '
 )
 
+# Функция загрузки истории
+def load_history(history_file):
+    if not os.path.exists(history_file):
+        return []
+    with open(history_file, 'r') as f:
+        # Читаем историю с конца
+        reversed_history = reversed(f.read().splitlines())
+        # Удаляем дублирующиеся команды с сохранением порядка
+        history = list(dict.fromkeys(reversed_history))
+    return history
+
+
 # Функция добавления команды в историю
 def add_to_history(cmd, history, history_file):
-    if cmd not in history:
-        history.append(cmd)
-        with open(history_file, 'a') as f:
-            # Запись команды в файл истории
-            f.write(cmd + '\n')
+    # Если команда уже есть в истории, удаляем ее
+    if cmd in history:
+        history.remove(cmd)
+    # Вставляем команду в начало списка истории
+    history.insert(0, cmd)
+    # Открываем файл истории для записи и перезаписываем команды в обратном порядке
+    with open(history_file, 'w') as f:
+        for command in reversed(history):
+            f.write(command + '\n')
 
-# Функция для получения списка директорий
+# Функция получения списка директорий
 def get_directories(path):
     try:
         return [d for d in os.listdir(path) if os.path.isdir(os.path.join(path, d))]
     except FileNotFoundError:
         return []
 
-# Функция для получения списка директорий и файлов
+# Функция получения списка директорий и файлов
 def get_files_and_dir(path):
     try:
         return os.listdir(path)
     except FileNotFoundError:
         return []
 
-# Функция для получения списка команд
+# Функция получения списка команд
 def get_exec_commands():
     commands = set()
     # Получаем список всех директорий из переменной PATH
@@ -248,9 +264,6 @@ def execute_command(cmd, history, history_file):
     # Фиксируем время запуска
     start_time = time.time()
 
-    # Выполнить команду в системе (не дает возможность передать переменные)
-    # os.system(f'/bin/bash -c "{cmd}"')
-
     # Запуск выполнения команды в отдельном процессе с указанием интерпритатора и передачей переменных
     process = subprocess.Popen(
         [SHELL, '-c', cmd],
@@ -272,19 +285,11 @@ def execute_command(cmd, history, history_file):
     execution_time = end_time - start_time
     return execution_time
 
+# Основная функция
 def main():
-    # Читаем историю и проверяем, что файл существует
+    # Загружаем историю команд из файла
     history_file = os.path.expanduser('~/.bash_history')
-    if not os.path.exists(history_file):
-        print(f"Command history file not found: {history_file}")
-        return
-    
-    # Чтение истории команд из файла
-    with open(history_file, 'r') as f:
-        history = f.read().splitlines()
-
-    # Удаление пустых строк и дубликатов из истории команд
-    history = list(set([entry.strip() for entry in history if entry.strip()]))
+    history = load_history(history_file)
     
     # Создание объекта истории ввода
     session_history = InMemoryHistory()
