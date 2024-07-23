@@ -27,7 +27,7 @@ In addition, searching for executable commands and displaying hints for them via
 - [x] Navigation through directories using `cd` and selecting files for reading via `cat`, `nano`, `vim` and `mcedit`, as well as copying via `cp` and `mv`.
 - [x] Captures and displays the execution time of the last executed command in the spirit of `oh-my-bash`.
 - [X] A mechanism for storing and passing variables of the current process to an external executable process has been implemented (⚠️ **may work unstable**), and also output of all variables via the `$$` symbol is supported.
-- [ ] Auto-complete search for executable commands using the ! or output cheat sheets for the last command entered in the line.
+- [ ] Auto-complete search for executable commands using the `!` or output cheat sheets for the last command entered in the line.
 
 > 💡 Because execution occurs in external and independent processes for each individual command, some actions may not perform as you expect (for example, calling functions repeatedly is not supported).
 
