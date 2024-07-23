@@ -110,8 +110,8 @@ class HistoryCompleter(Completer):
         self.history = history
 
     def get_completions(self, document, complete_event):
-        # Фиксируем текущий текст в поле ввода и опускаем регистр
-        text = document.text.lower()
+        # Фиксируем текущий текст в поле ввода
+        text = document.text
 
         # Ничего не делаем, если текст пустой
         if not text:
@@ -244,7 +244,7 @@ class HistoryCompleter(Completer):
 
         # Логика автодополнения для поиска исполняемых команд через "!"
         elif text.startswith('!'):
-            command_prefix = text[1:].strip()
+            command_prefix = text[1:].strip().lower()
             self.commands = get_exec_commands()
             for cmd in self.commands:
                 if cmd.startswith(command_prefix):
@@ -253,17 +253,18 @@ class HistoryCompleter(Completer):
         # Логика вывода списка переменных "$" (ищем символ в любой части строки)
         elif '$' in text:
             # Забираем текст после последнего символа "$"
-            var = text.split('$')[-1].strip()
+            var = text.split('$')[-1].strip().lower()
             for key in env.keys():
                 if key.lower().startswith(var.lower()):
                     yield Completion(f'{key}', start_position=-len(var), display=HTML(f'<cyan>{key}</cyan>'), display_meta='Variable')
-    
         
         # Фильтрация истории команд по введенному тексту
         else:
+            # Опускаем регистр входного значения
+            text = text.lower()
             # Фильтрация с использованием Regex для опредиления текст в начале или конце строки с соблюдением положения
-            regex_start = document.text.startswith('^')
-            regex_end = document.text.endswith('^')
+            regex_start = text.startswith('^')
+            regex_end = text.endswith('^')
 
             if regex_start:
                 # Убираем '^' из начала текста
