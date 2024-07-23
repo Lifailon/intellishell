@@ -173,6 +173,75 @@ class HistoryCompleter(Completer):
                         else:
                             yield Completion(f'{command} {full_path}', start_position=-len(text), display=HTML(f'<cyan>{entry}</cyan>'), display_meta='File')
 
+        # Логика автодополнения для команд cp и mv
+        elif any(text.startswith(cmd) for cmd in ['cp ', 'mv ']):
+            command = text.split()[0]
+            # Извлекаем аргументы команды
+            arguments = text[len(command):].strip().split()
+            
+            # Если аргументов меньше двух (еще не указан целевой путь)
+            if len(arguments) < 2:
+                # Получаем первый аргумент или пустую строку
+                text_suffix = arguments[0] if arguments else ''
+                if text_suffix.startswith('/'):
+                    # Используем абсолютный путь
+                    path_to_complete = text_suffix
+                else:
+                    path_to_complete = os.path.join(os.getcwd(), text_suffix)
+                
+                # Если путь заканчивается на '/' и не содержит пробелов
+                if text_suffix.endswith('/') and ' ' not in text_suffix:
+                    files_and_dirs = get_files_and_dir(path_to_complete)
+                    for entry in files_and_dirs:
+                        full_path = os.path.join(path_to_complete, entry)
+                        if os.path.isdir(full_path):
+                            # Возвращаем автодополнение для директории
+                            yield Completion(f'{command} {full_path}/', start_position=-len(text), display=HTML(f'<green>{entry}/</green>'), display_meta='Directory')
+                        else:
+                            # Возвращаем автодополнение для файла
+                            yield Completion(f'{command} {full_path}', start_position=-len(text), display=HTML(f'<cyan>{entry}</cyan>'), display_meta='File')
+                else:
+                    base_path = os.path.dirname(path_to_complete)
+                    partial_name = os.path.basename(path_to_complete)
+                    files_and_dirs = get_files_and_dir(base_path)
+                    for entry in files_and_dirs:
+                        if entry.startswith(partial_name):
+                            full_path = os.path.join(base_path, entry)
+                            if os.path.isdir(full_path):
+                                yield Completion(f'{command} {full_path}/', start_position=-len(text), display=HTML(f'<green>{entry}/</green>'), display_meta='Directory')
+                            else:
+                                yield Completion(f'{command} {full_path}', start_position=-len(text), display=HTML(f'<cyan>{entry}</cyan>'), display_meta='File')
+            
+            # Если аргументов два или больше (указан второй путь)
+            else:
+                second_path_suffix = arguments[-1]
+                if second_path_suffix.startswith('/'):
+                    path_to_complete = second_path_suffix
+                else:
+                    path_to_complete = os.path.join(os.getcwd(), second_path_suffix)
+                
+                # Если второй путь заканчивается на '/' и не содержит пробелов
+                if second_path_suffix.endswith('/') and ' ' not in second_path_suffix:
+                    files_and_dirs = get_files_and_dir(path_to_complete)
+                    for entry in files_and_dirs:
+                        full_path = os.path.join(path_to_complete, entry)
+                        if os.path.isdir(full_path):
+                            yield Completion(f'{command} {" ".join(arguments[:-1])} {full_path}/', start_position=-len(text), display=HTML(f'<green>{entry}/</green>'), display_meta='Directory')
+                        else:
+                            yield Completion(f'{command} {" ".join(arguments[:-1])} {full_path}', start_position=-len(text), display=HTML(f'<cyan>{entry}</cyan>'), display_meta='File')
+                # Обработка второго пути без '/'
+                else:
+                    base_path = os.path.dirname(path_to_complete)
+                    partial_name = os.path.basename(path_to_complete)
+                    files_and_dirs = get_files_and_dir(base_path)
+                    for entry in files_and_dirs:
+                        if entry.startswith(partial_name):
+                            full_path = os.path.join(base_path, entry)
+                            if os.path.isdir(full_path):
+                                yield Completion(f'{command} {" ".join(arguments[:-1])} {full_path}/', start_position=-len(text), display=HTML(f'<green>{entry}/</green>'), display_meta='Directory')
+                            else:
+                                yield Completion(f'{command} {" ".join(arguments[:-1])} {full_path}', start_position=-len(text), display=HTML(f'<cyan>{entry}</cyan>'), display_meta='File')
+
         # Логика автодополнения для поиска исполняемых команд через "!"
         elif text.startswith('!'):
             command_prefix = text[1:].strip()
