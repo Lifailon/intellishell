@@ -3,6 +3,7 @@ import re
 import subprocess
 import signal
 import time
+import requests
 from prompt_toolkit import PromptSession
 from prompt_toolkit.completion import Completer, Completion
 from prompt_toolkit.shortcuts import prompt
@@ -103,6 +104,35 @@ def env_update(cmd, env):
         updated = "__static__"
 
     return updated
+
+# Функция подсказок
+def get_command_examples(command):
+    try:
+        sheet_url = f"https://cheat.sh/{command}"
+        response = requests.get(sheet_url)
+        response.raise_for_status()
+        content = response.text
+        # Разбиваем содержимое на строки
+        lines = content.splitlines()
+        # Фильтруем и очищаем строки
+        commands = []
+        for line in lines:
+            line = line.strip()
+            if line and not line.startswith(('#', 'tags:', '---', 'tldr:', 'cheat:')):
+                # Удаляем ANSI коды цвета
+                line = re.sub(r'\x1b\[[0-9;]*m', '', line)
+                # Проверяем, что строка начинается с заданной команды
+                if line.startswith(command):
+                    commands.append(line)
+        return commands
+    except requests.RequestException:
+        return ["Command not found"]
+
+# Пример использования
+# command = "ping"
+# examples = get_command_examples(command)
+# for example in examples:
+#     print(example)
 
 class HistoryCompleter(Completer):
     def __init__(self, history):
