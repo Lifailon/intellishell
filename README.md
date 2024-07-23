@@ -1,27 +1,36 @@
+<h1 align="center">
+  🧠 Intelli Shell 🐚
+</h1>
+
 <p align="center">
-    <img src="logo/insh.png" alt="Logo" style="display: block; margin: 0;">
+<a href="https://github.com/Lifailon/intellishell"><img title="GitHub top language"src="https://img.shields.io/github/languages/top/Lifailon/intellishell?logo=Python&color=blue&"></a>
+<a href="https://github.com/Lifailon/intellishell"><img title="GitHub Release"src="https://img.shields.io/github/v/release/Lifailon/intellishell?include_prereleases&logo=Git&color=red&)](https://github.com/Lifailon/intellishell"></a>
+<a href="https://github.com/Lifailon/intellishell/blob/rsa/LICENSE"><img title="GitHub License"src="https://img.shields.io/github/license/Lifailon/intellishell?link=https%3A%2F%2Fgithub.com%2FLifailon%2Fintellishell%2Fblob%2Frsa%2FLICENSE&logo=GitHub&color=white&"></a>
 </p>
 
-<h1 align="center" style="margin-top: 0; line-height: 1.2;">
-    🧠 Intelli Shell 🐚
-</h1>
+<p align="center">
+    <img src="logo/insh.png">
+</p>
 
 This is a handler that runs on top of the `Bash` shell and implements an auto-completion mechanism using a dropdown list.
 
 You can view the history of executed commands with support for filtering and regular expressions in real time by selecting and executing them from a list, and use directory navigation without leaving the current input line.
-It also supports searching for executable commands and displaying hints for them via [cheat.sh](https://github.com/chubin/cheat.sh).
+
+In addition, searching for executable commands and displaying hints for them via [cheat.sh](https://github.com/chubin/cheat.sh) is supported.
 
 ---
 
 ### ✨ Implemented:
 
 - [x] History filtering (takes into account the order of execution with duplicates excluded) and running the selected command (using the `Enter` button) from a drop-down list in an *external process* with support for recording executed commands in the history;
-- [x] Navigate through directories with `cd` and output files for reading via `cat`, `nano`, `vim` and `mcedit`, and also copying via `cp` and `mv`;
+- [X] Support for regular expressions during filtering, taking into account the position of entered phrases in the command using the `^` character at the beginning or end of a line (by default, the search is performed regardless of the position of entered phrases separated by a space);
+- [x] Navigation through directories using `cd` and selecting files for reading via `cat`, `nano`, `vim` and `mcedit`, as well as copying via `cp` and `mv`;
 - [x] Captures and displays the execution time of the last executed command in the spirit of `oh-my-bash`;
 - [X] Refreshing the history by using `backspace` keys and selecting a command with the `right` arrow without executing it, which is also convenient for moving to the next directory to quickly display its contents;.
-- [X] Support for regular expressions during filtering, taking into account the position of entered phrases in the command using the `^` character at the beginning or end of a line (by default, the search is performed regardless of the position of entered phrases separated by a space);
-- [X] Search for executable commands using the `!`;
 - [X] A mechanism for storing and passing variables of the current process to an external executable process has been implemented (⚠️ **may work unstable**), and also output of all variables via the `$$` symbol is supported;
+- [X] Search for executable commands using the `!`;
 - [ ] Auto-completion of the search for executable commands and output of cheat sheets.
 
-> 💡 Since execution occurs in external and independent processes, some commands may not execute as you expect.
+> 💡 Because execution occurs in external and independent processes for each individual command, some actions may not perform as you expect (for example, calling functions repeatedly is not supported).
+
+<!--- Hotkeys --->
