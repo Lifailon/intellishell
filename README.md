@@ -1,10 +1,16 @@
-<h1 align="center">
-  🧠 Intelli Shell 🐚
+<p align="center">
+    <img src="logo/insh.png" alt="Logo" style="display: block; margin: 0;">
+</p>
+
+<h1 align="center" style="margin-top: 0; line-height: 1.2;">
+    🧠 Intelli Shell 🐚
 </h1>
 
 This is a handler that runs on top of the `Bash` shell and implements an auto-completion mechanism using a dropdown list.
 
 You can view the history of commands executed with filtering and regular expressions support in real time, selecting and executing them, and use directory and file navigation without leaving the current input line.
+
+---
 
 ### ✨ Implemented:
 
