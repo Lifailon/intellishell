@@ -4,12 +4,12 @@ import subprocess
 import signal
 import time
 import requests
-from prompt_toolkit import PromptSession
 from prompt_toolkit.completion import Completer, Completion
 from prompt_toolkit.shortcuts import prompt
 from prompt_toolkit.history import InMemoryHistory
 from prompt_toolkit.formatted_text import HTML
 from prompt_toolkit.key_binding import KeyBindings
+import html
 
 # Интерпритатор по умолчанию
 SHELL = '/bin/bash'
@@ -425,7 +425,57 @@ def main():
         else:
             # Перемещаем курсор на одну позицию вперед
             buffer.cursor_position += 1
+    
+    def safe_html(text):
+        """Безопасно преобразует текст в HTML-формат."""
+        return html.escape(str(text)).replace('\n', '<br>')
 
+    class OneTimeCompleter(Completer):
+        def __init__(self):
+            self.completions = []
+            self.used = False
+
+        def set_completions(self, completions):
+            self.completions = completions
+            self.used = False
+
+        def get_completions(self, document, complete_event):
+            if not self.used:
+                self.used = True
+                return self.completions
+            return []
+
+    one_time_completer = OneTimeCompleter()
+
+    @bindings.add('c-f')
+    def _(event):
+        buffer = event.app.current_buffer
+        text = buffer.text.strip()
+        words = text.split()
+        last_word = words[-1] if words else ""
+
+        examples = get_command_examples(last_word)
+
+        completions = []
+        for example in examples:
+            if isinstance(example, str) and example.startswith(last_word):
+                try:
+                    safe_example = safe_html(example)
+                    completions.append(
+                        Completion(
+                            example,
+                            start_position=-len(last_word),
+                            display=HTML(f'<cyan>{safe_example}</cyan>'),
+                            display_meta='Example'
+                        )
+                    )
+                except Exception as e:
+                    print(f"Error processing example '{example}': {str(e)}")
+
+        one_time_completer.set_completions(completions)
+        buffer.completer = one_time_completer
+        buffer.start_completion(select_first=False)
+    
     # Основной цикл обработки
     while True:
         try:
