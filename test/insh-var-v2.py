@@ -2,7 +2,6 @@ import os
 import subprocess
 import signal
 import time
-import select
 from prompt_toolkit import PromptSession
 from prompt_toolkit.completion import Completer, Completion
 from prompt_toolkit.shortcuts import prompt
@@ -11,6 +10,9 @@ from prompt_toolkit.formatted_text import HTML
 
 # Глобальная переменная для хранения вывода последней команды
 last_command_output = ""
+
+# Словарь для хранения переменных
+shell_variables = {}
 
 class HistoryCompleter(Completer):
     def __init__(self, history):
@@ -70,16 +72,14 @@ def add_to_history(cmd, history, history_file):
         with open(history_file, 'a') as f:
             f.write(cmd + '\n')
 
-def execute_command(cmd, process, history, history_file):
-    global last_command_output
+def execute_command(cmd, history, history_file):
+    global last_command_output, shell_variables
     add_to_history(cmd, history, history_file)
     
     if cmd.startswith('cd '):
         try:
             target_dir = cmd[2:].strip()
             os.chdir(target_dir)
-            process.stdin.write(f"cd {target_dir}\n")
-            process.stdin.flush()
             return 0
         except Exception as e:
             print(f"Incorrect path")
@@ -87,27 +87,38 @@ def execute_command(cmd, process, history, history_file):
 
     start_time = time.time()
     
+    # Обработка присваивания переменных
+    if '=' in cmd and not cmd.startswith(('export ', 'declare ')):
+        var_name, var_value = cmd.split('=', 1)
+        shell_variables[var_name.strip()] = var_value.strip()
+        print(f"Variable {var_name.strip()} set to {var_value.strip()}")
+        return 0
+
+    # Замена переменных в команде
+    for var, value in shell_variables.items():
+        cmd = cmd.replace(f"${var}", value)
+
     try:
-        # Очистка вывода
-        while select.select([process.stdout], [], [], 0)[0]:
-            process.stdout.readline()
-        
-        # Отправляем команду в bash
-        process.stdin.write(cmd + '\n')
-        process.stdin.write("echo '<<<END_OF_COMMAND>>>'\n")
-        process.stdin.flush()
+        process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, preexec_fn=os.setsid)
         
         last_command_output = ""
         while True:
             output = process.stdout.readline()
-            if '<<<END_OF_COMMAND>>>' in output:
+            if output == '' and process.poll() is not None:
                 break
-            print(output.strip())
-            last_command_output += output
+            if output:
+                print(output.strip())
+                last_command_output += output
         
+        stderr_output = process.stderr.read()
+        if stderr_output:
+            print(stderr_output.strip())
+            last_command_output += stderr_output
+        
+        return_code = process.wait()
     except KeyboardInterrupt:
-        # Отправляем сигнал SIGINT в bash
         os.killpg(os.getpgid(process.pid), signal.SIGINT)
+        return_code = process.wait()
         print("\nCommand interrupted by user.")
     
     end_time = time.time()
@@ -129,9 +140,6 @@ def main():
     completer = HistoryCompleter(history)
 
     last_execution_time = 0
-
-    # Запускаем bash в режиме, который не читает .bashrc и .bash_profile
-    process = subprocess.Popen(['bash', '--norc', '--noprofile'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1, preexec_fn=os.setsid)
 
     while True:
         try:
@@ -157,7 +165,7 @@ def main():
                         if search_text in line.lower():
                             print(line)
                 else:
-                    last_execution_time = execute_command(user_input, process, history, history_file)
+                    last_execution_time = execute_command(user_input, history, history_file)
                 completer = HistoryCompleter(history)
         
         except EOFError:
@@ -167,14 +175,4 @@ def main():
             print("\nCommand interrupted by user.")
             continue
 
-        except BrokenPipeError:
-            print("Restarting the Bash process due to an error...")
-            process = subprocess.Popen(['bash', '--norc', '--noprofile'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1, preexec_fn=os.setsid)
-
-    # Завершаем процесс bash
-    process.stdin.close()
-    process.terminate()
-    process.wait(timeout=0.2)
-
-if __name__ == "__main__":
-    main()
+main()

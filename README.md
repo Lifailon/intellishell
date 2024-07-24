@@ -14,7 +14,7 @@
 
 This is a handler that runs on top of the Bash shell and implements command autocomplete using a dropdown list in real time.
 
-You can view the history of executed commands with support for filtering and regular expressions, select and execute them from a list, and use directory navigation without leaving the current input line. Additionally, it supports outputting variables and searching for executable commands and displaying a list of examples for them via [cheet.sh](https://github.com/chubin/cheat.sh).
+You can view the history of executed commands with support for filtering and regular expressions, select and execute them from a list, and use directory navigation without leaving the current input line. In addition, it supports outputting variables, searching with filtering by the output of the last executed command, searching for executable commands and displaying a list of examples for them via [cheet.sh](https://github.com/chubin/cheat.sh).
 
 ---
 
@@ -26,6 +26,7 @@ You can view the history of executed commands with support for filtering and reg
 - [x] Captures and displays the execution time of the last executed command in the spirit of `oh-my-bash`.
 - [X] A mechanism for storing and passing variables of the current process to an external executable process has been implemented (⚠️ **may work unstable**), and also output of all variables via the `$$` symbol is supported.
 - [ ] Auto-complete search for executable commands using the `!` or output cheat sheets for the last command entered in the line.
+- [ ] Performs a filtered search based on the output of the last command executed when using the `@` symbol at the beginning of the input line, this acts as an alternative to grep, which must be called each time the text in the filter query changes.
 
 > 💡 Because execution occurs in external and independent processes for each individual command, some actions may not perform as you expect (for example, calling functions repeatedly is not supported).
 
@@ -33,6 +34,6 @@ You can view the history of executed commands with support for filtering and reg
 
 - `right` – select a command without executing it, which is convenient for continuing recording or moving to the next directory to quickly display its contents.
 - `backspace` - updates history to reflect changes.
-- `ctrl+c` - clears the current input line (buffer) without moving to a new line or ends the execution of the command being executed
-- `ctrl+l` - completely clears the output console and does not affect the input line
-- `ctrl+q` - hides the drop-down list until the next input
+- `ctrl+c` - clears the current input line (buffer) without moving to a new line or ends the execution of the command being executed.
+- `ctrl+l` - completely clears the output console without affecting the input console and without changing the last execution command.
+- `ctrl+q` - hides the drop-down list until the next input.
