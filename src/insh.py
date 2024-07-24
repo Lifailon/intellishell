@@ -75,6 +75,47 @@ def get_exec_commands():
                     commands.add(filename)
     return sorted(commands)
 
+# Получаем список доступных команд:
+def get_cheat_commands():
+    try:
+        sheet_url = "https://cheat.sh/:list"
+        response = requests.get(sheet_url)
+        response.raise_for_status()
+        content = response.text
+        lines = content.splitlines()
+        commands = [line for line in lines]
+        return sorted(commands)
+    except requests.RequestException:
+        return get_exec_commands()
+
+# Фиксируем список команд при запуске
+command_cheat_list = get_cheat_commands()
+
+# Функция подсказок
+def get_command_examples(command):
+    try:
+        sheet_url = f"https://cheat.sh/{command}"
+        response = requests.get(sheet_url)
+        response.raise_for_status()
+        content = response.text
+        # Разбиваем содержимое на строки
+        lines = content.splitlines()
+        # Фильтруем и очищаем строки
+        commands = []
+        for line in lines:
+            line = line.strip()
+            if line and not line.startswith(('#', 'tags:', '---', 'tldr:', 'cheat:')):
+                # Удаляем ANSI коды цвета
+                line = re.sub(r'\x1b\[[0-9;]*m', '', line)
+                # Удаляем лишние комментарии в конце строки
+                line = line.split('#', 1)[0].strip()
+                # Проверяем, что строка начинается с заданной команды
+                if line.startswith(command):
+                    commands.append(line)
+        return commands
+    except requests.RequestException:
+        return ["Command not found"]
+
 # Фиксируем переменные системного окружения при запуске
 env = os.environ.copy()
 
@@ -103,45 +144,6 @@ def env_update(cmd, env):
         updated = "__static__"
 
     return updated
-
-# Функция подсказок
-def get_command_examples(command):
-    try:
-        sheet_url = f"https://cheat.sh/{command}"
-        response = requests.get(sheet_url)
-        response.raise_for_status()
-        content = response.text
-        # Разбиваем содержимое на строки
-        lines = content.splitlines()
-        # Фильтруем и очищаем строки
-        commands = []
-        for line in lines:
-            line = line.strip()
-            if line and not line.startswith(('#', 'tags:', '---', 'tldr:', 'cheat:')):
-                # Удаляем ANSI коды цвета
-                line = re.sub(r'\x1b\[[0-9;]*m', '', line)
-                # Проверяем, что строка начинается с заданной команды
-                if line.startswith(command):
-                    commands.append(line)
-        return commands
-    except requests.RequestException:
-        return ["Command not found"]
-
-# Получаем список доступных команд:
-def get_cheat_commands():
-    try:
-        sheet_url = "https://cheat.sh/:list"
-        response = requests.get(sheet_url)
-        response.raise_for_status()
-        content = response.text
-        lines = content.splitlines()
-        commands = [line for line in lines]
-        return sorted(commands)
-    except requests.RequestException:
-        return ["Command list not available"]
-
-# Фиксируем список команд при запуске
-command_cheat_list = get_cheat_commands()
 
 class HistoryCompleter(Completer):
     def __init__(self, history):
@@ -172,7 +174,12 @@ class HistoryCompleter(Completer):
                 dirs = get_directories(path_to_complete)
                 for d in dirs:
                     full_path = os.path.join(path_to_complete, d)
-                    yield Completion(f'cd {full_path}/', start_position=-len(text), display=HTML(f'<green>{d}</green>'), display_meta='Directory')
+                    yield Completion(
+                        f'cd {full_path}/',
+                        start_position = -len(text),
+                        display = HTML(f'<green>{d}</green>'),
+                        display_meta = 'Directory'
+                    )
             else:
                 base_path = os.path.dirname(path_to_complete)
                 partial_name = os.path.basename(path_to_complete)
@@ -180,7 +187,12 @@ class HistoryCompleter(Completer):
                 for d in dirs:
                     if d.startswith(partial_name):
                         full_path = os.path.join(base_path, d)
-                        yield Completion(f'cd {full_path}/', start_position=-len(text), display=HTML(f'<green>{d}</green>'), display_meta='Directory')
+                        yield Completion(
+                            f'cd {full_path}/',
+                            start_position = -len(text),
+                            display = HTML(f'<green>{d}</green>'),
+                            display_meta = 'Directory'
+                        )
 
         # Логика автодополнения для команды чтения (cat и других)
         elif any(text.startswith(cmd) for cmd in commands):
@@ -197,9 +209,19 @@ class HistoryCompleter(Completer):
                 for entry in files_and_dirs:
                     full_path = os.path.join(path_to_complete, entry)
                     if os.path.isdir(full_path):
-                        yield Completion(f'{command} {full_path}/', start_position=-len(text), display=HTML(f'<green>{entry}</green>'), display_meta='Directory')
+                        yield Completion(
+                            f'{command} {full_path}/',
+                            start_position = -len(text),
+                            display = HTML(f'<green>{entry}</green>'),
+                            display_meta = 'Directory'
+                        )
                     else:
-                        yield Completion(f'{command} {full_path}', start_position=-len(text), display=HTML(f'<cyan>{entry}</cyan>'), display_meta='File')
+                        yield Completion(
+                            f'{command} {full_path}',
+                            start_position = -len(text),
+                            display = HTML(f'<cyan>{entry}</cyan>'),
+                            display_meta = 'File'
+                        )
             else:
                 base_path = os.path.dirname(path_to_complete)
                 partial_name = os.path.basename(path_to_complete)
@@ -208,9 +230,19 @@ class HistoryCompleter(Completer):
                     if entry.startswith(partial_name):
                         full_path = os.path.join(base_path, entry)
                         if os.path.isdir(full_path):
-                            yield Completion(f'{command} {full_path}/', start_position=-len(text), display=HTML(f'<green>{entry}</green>'), display_meta='Directory')
+                            yield Completion(
+                                f'{command} {full_path}/',
+                                start_position = -len(text),
+                                display = HTML(f'<green>{entry}</green>'),
+                                display_meta='Directory'
+                            )
                         else:
-                            yield Completion(f'{command} {full_path}', start_position=-len(text), display=HTML(f'<cyan>{entry}</cyan>'), display_meta='File')
+                            yield Completion(
+                                f'{command} {full_path}',
+                                start_position = -len(text),
+                                display = HTML(f'<cyan>{entry}</cyan>'),
+                                display_meta = 'File'
+                            )
 
         # Логика автодополнения для команд cp и mv
         elif any(text.startswith(cmd) for cmd in ['cp ', 'mv ']):
@@ -235,10 +267,20 @@ class HistoryCompleter(Completer):
                         full_path = os.path.join(path_to_complete, entry)
                         if os.path.isdir(full_path):
                             # Возвращаем автодополнение для директории
-                            yield Completion(f'{command} {full_path}/', start_position=-len(text), display=HTML(f'<green>{entry}/</green>'), display_meta='Directory')
+                            yield Completion(
+                                f'{command} {full_path}/',
+                                start_position = -len(text),
+                                display = HTML(f'<green>{entry}/</green>'),
+                                display_meta = 'Directory'
+                            )
                         else:
                             # Возвращаем автодополнение для файла
-                            yield Completion(f'{command} {full_path}', start_position=-len(text), display=HTML(f'<cyan>{entry}</cyan>'), display_meta='File')
+                            yield Completion(
+                                f'{command} {full_path}',
+                                start_position = -len(text),
+                                display = HTML(f'<cyan>{entry}</cyan>'),
+                                display_meta = 'File'
+                            )
                 else:
                     base_path = os.path.dirname(path_to_complete)
                     partial_name = os.path.basename(path_to_complete)
@@ -247,9 +289,19 @@ class HistoryCompleter(Completer):
                         if entry.startswith(partial_name):
                             full_path = os.path.join(base_path, entry)
                             if os.path.isdir(full_path):
-                                yield Completion(f'{command} {full_path}/', start_position=-len(text), display=HTML(f'<green>{entry}/</green>'), display_meta='Directory')
+                                yield Completion(
+                                    f'{command} {full_path}/',
+                                    start_position = -len(text),
+                                    display = HTML(f'<green>{entry}/</green>'),
+                                    display_meta = 'Directory'
+                                )
                             else:
-                                yield Completion(f'{command} {full_path}', start_position=-len(text), display=HTML(f'<cyan>{entry}</cyan>'), display_meta='File')
+                                yield Completion(
+                                    f'{command} {full_path}',
+                                    start_position = -len(text),
+                                    display = HTML(f'<cyan>{entry}</cyan>'),
+                                    display_meta = 'File'
+                                )
             
             # Если аргументов два или больше (указан второй путь)
             else:
@@ -265,9 +317,19 @@ class HistoryCompleter(Completer):
                     for entry in files_and_dirs:
                         full_path = os.path.join(path_to_complete, entry)
                         if os.path.isdir(full_path):
-                            yield Completion(f'{command} {" ".join(arguments[:-1])} {full_path}/', start_position=-len(text), display=HTML(f'<green>{entry}/</green>'), display_meta='Directory')
+                            yield Completion(
+                                f'{command} {" ".join(arguments[:-1])} {full_path}/',
+                                start_position = -len(text),
+                                display = HTML(f'<green>{entry}/</green>'),
+                                display_meta = 'Directory'
+                            )
                         else:
-                            yield Completion(f'{command} {" ".join(arguments[:-1])} {full_path}', start_position=-len(text), display=HTML(f'<cyan>{entry}</cyan>'), display_meta='File')
+                            yield Completion(
+                                f'{command} {" ".join(arguments[:-1])} {full_path}',
+                                start_position = -len(text),
+                                display = HTML(f'<cyan>{entry}</cyan>'),
+                                display_meta = 'File'
+                            )
                 # Обработка второго пути без '/'
                 else:
                     base_path = os.path.dirname(path_to_complete)
@@ -277,28 +339,30 @@ class HistoryCompleter(Completer):
                         if entry.startswith(partial_name):
                             full_path = os.path.join(base_path, entry)
                             if os.path.isdir(full_path):
-                                yield Completion(f'{command} {" ".join(arguments[:-1])} {full_path}/', start_position=-len(text), display=HTML(f'<green>{entry}/</green>'), display_meta='Directory')
+                                yield Completion(
+                                    f'{command} {" ".join(arguments[:-1])} {full_path}/',
+                                    start_position = -len(text),
+                                    display = HTML(f'<green>{entry}/</green>'),
+                                    display_meta = 'Directory'
+                                )
                             else:
-                                yield Completion(f'{command} {" ".join(arguments[:-1])} {full_path}', start_position=-len(text), display=HTML(f'<cyan>{entry}</cyan>'), display_meta='File')
+                                yield Completion(
+                                    f'{command} {" ".join(arguments[:-1])} {full_path}',
+                                    start_position = -len(text),
+                                    display = HTML(f'<cyan>{entry}</cyan>'),
+                                    display_meta = 'File'
+                                )
 
-        # Логика автодополнения для поиска исполняемых команд через "!" в начале строки
-        elif text.startswith('!'):
-            command_prefix = text[1:].strip().lower()
-            self.commands = get_exec_commands()
-            for cmd in self.commands:
-                if cmd.startswith(command_prefix):
-                    yield Completion(cmd, start_position=-len(command_prefix)-1, display=HTML(f'<cyan>{cmd}</cyan>'), display_meta='Command')
-
-        # Логика вывода списка переменных через два символа "$"" в конце строки
-        elif text.endswith('$$'):
+        # Логика вывода списка переменных через два символа "$" в конце строки
+        elif text.split()[-1].startswith('$$'):
             # Забираем текст после последнего символа "$"
             var = text.split('$$')[-1].strip().lower()
             for key in env.keys():
                 if key.lower().startswith(var.lower()):
                     yield Completion(f'{key}',
-                        start_position=-len(var)-1,
-                        display=HTML(f'<cyan>{key}</cyan>'),
-                        display_meta='Variable'
+                        start_position = -len(var)-1,
+                        display = HTML(f'<cyan>{key}</cyan>'),
+                        display_meta = 'Variable'
                     )
 
         # Логика вывода подсказок, если в конце строки идет "!"
@@ -326,21 +390,21 @@ class HistoryCompleter(Completer):
                 for command in command_cheat_list:
                     if command.lower().startswith(cur_text.lower()):
                         yield Completion(f'{command}',
-                            start_position=-len(old_text),
-                            display=HTML(f'<cyan>{command}</cyan>'),
-                            display_meta='Command'
+                            start_position = -len(old_text),
+                            display = HTML(f'<cyan>{command}</cyan>'),
+                            display_meta = 'Command'
                         )
         
-        # Если последняя команда в строке ввода содержит текст после символа "!" дополняем из списка команд
+        # Если последняя команда в строке ввода содержит текст после символа "!" дополняем ее из списка команд
         elif text.split()[-1].startswith('!'):
             cur_text = text.split()[-1][1:]
             old_text = text.split()[-1]
             for command in command_cheat_list:
                 if command.lower().startswith(cur_text.lower()):
                     yield Completion(f'{command}',
-                        start_position=-len(old_text),
-                        display=HTML(f'<cyan>{command}</cyan>'),
-                        display_meta='Command'
+                        start_position = -len(old_text),
+                        display = HTML(f'<cyan>{command}</cyan>'),
+                        display_meta = 'Command'
                     )
 
         # Фильтрация истории команд по введенному тексту
@@ -357,21 +421,30 @@ class HistoryCompleter(Completer):
                 for entry in self.history:
                     # Опускаем регистр (lower()) в условии для фильтрации
                     if entry.lower().startswith(text):
-                        yield Completion(entry, start_position=-len(document.text))
+                        yield Completion(
+                            entry,
+                            start_position = -len(document.text)
+                        )
                         
             elif regex_end:
                 # Убираем '^' из конца текста
                 text = text[:-1]
                 for entry in self.history:
                     if entry.lower().endswith(text):
-                        yield Completion(entry, start_position=-len(document.text))
+                        yield Completion(
+                            entry,
+                            start_position = -len(document.text)
+                        )
             
             # Фильтрация без Regex (проверяем наличие всех словосочетаний в строке не зависимо от их положения)
             else:
                 words = text.split()
                 for entry in self.history:
                     if all(word in entry.lower() for word in words):
-                        yield Completion(entry, start_position=-len(text))
+                        yield Completion(
+                            entry,
+                            start_position = -len(text)
+                        )
         
 # Функция выполнения команды
 def execute_command(cmd, history, history_file):
@@ -481,13 +554,30 @@ def main():
             # Перемещаем курсор на одну позицию вперед
             buffer.cursor_position += 1
     
-    @bindings.add('c-f')
+    # @bindings.add('c-f')
+    # def _(event):
+    #     buffer = event.app.current_buffer
+    #     buffer.text += '!'
+    #     buffer.cursor_position = len(buffer.text)
+    #     buffer.start_completion()
+    
+    @bindings.add('c-q')
     def _(event):
         buffer = event.app.current_buffer
-        buffer.text += '!'
-        buffer.cursor_position = len(buffer.text)
-        buffer.start_completion()
-    
+        buffer.cursor_position -= 1
+        buffer.cursor_position += 1
+
+    @bindings.add('c-l')
+    def _(event):
+        os.system('clear')
+        event.app.renderer.clear()
+        
+
+    @bindings.add('c-c')
+    def _(event):
+        buffer = event.app.current_buffer
+        buffer.reset()
+
     # Основной цикл обработки
     while True:
         try:

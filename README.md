@@ -25,8 +25,8 @@ You can view the history of executed commands with support for filtering and reg
 - [x] Navigation through directories using `cd` and selecting files for reading via `cat`, `nano`, `vim` and `mcedit`, as well as copying via `cp` and `mv`.
 - [x] Captures and displays the execution time of the last executed command in the spirit of `oh-my-bash`.
 - [X] A mechanism for storing and passing variables of the current process to an external executable process has been implemented (⚠️ **may work unstable**), and also output of all variables via the `$$` symbol is supported.
-- [ ] Auto-complete search for executable commands using the `!` or output cheat sheets for the last command entered in the line.
-- [ ] Performs a filtered search based on the output of the last command executed when using the `@` symbol at the beginning of the input line, this acts as an alternative to grep, which must be called each time the text in the filter query changes.
+- [X] Auto-complete search for executable commands using the `!` or output cheat sheets for the last command entered in the line.
+- [ ] Performs a filtered search based on the output of the last command executed when the `@` character is used at the beginning of the input line. This can be used as an alternative to grep, which needs to be called every time the text in the filter query changes, or if you have previously used a soft terminal search but the output may have gone beyond it.
 
 > 💡 Because execution occurs in external and independent processes for each individual command, some actions may not perform as you expect (for example, calling functions repeatedly is not supported).
 
