@@ -9,8 +9,6 @@ from prompt_toolkit.shortcuts import prompt
 from prompt_toolkit.history import InMemoryHistory
 from prompt_toolkit.formatted_text import HTML
 from prompt_toolkit.key_binding import KeyBindings
-from prompt_toolkit.application import get_app
-
 
 # Интерпритатор по умолчанию
 SHELL = '/bin/bash'
@@ -129,11 +127,21 @@ def get_command_examples(command):
     except requests.RequestException:
         return ["Command not found"]
 
-# Пример использования
-# command = "ping"
-# examples = get_command_examples(command)
-# for example in examples:
-#     print(example)
+# Получаем список доступных команд:
+def get_cheat_commands():
+    try:
+        sheet_url = "https://cheat.sh/:list"
+        response = requests.get(sheet_url)
+        response.raise_for_status()
+        content = response.text
+        lines = content.splitlines()
+        commands = [line for line in lines]
+        return sorted(commands)
+    except requests.RequestException:
+        return ["Command list not available"]
+
+# Фиксируем список команд при запуске
+command_cheat_list = get_cheat_commands()
 
 class HistoryCompleter(Completer):
     def __init__(self, history):
@@ -273,7 +281,7 @@ class HistoryCompleter(Completer):
                             else:
                                 yield Completion(f'{command} {" ".join(arguments[:-1])} {full_path}', start_position=-len(text), display=HTML(f'<cyan>{entry}</cyan>'), display_meta='File')
 
-        # Логика автодополнения для поиска исполняемых команд через "!"
+        # Логика автодополнения для поиска исполняемых команд через "!" в начале строки
         elif text.startswith('!'):
             command_prefix = text[1:].strip().lower()
             self.commands = get_exec_commands()
@@ -281,42 +289,60 @@ class HistoryCompleter(Completer):
                 if cmd.startswith(command_prefix):
                     yield Completion(cmd, start_position=-len(command_prefix)-1, display=HTML(f'<cyan>{cmd}</cyan>'), display_meta='Command')
 
-        # Логика вывода списка переменных "$" (ищем символ в любой части строки)
-        elif '$' in text:
+        # Логика вывода списка переменных через два символа "$"" в конце строки
+        elif text.endswith('$$'):
             # Забираем текст после последнего символа "$"
-            var = text.split('$')[-1].strip().lower()
+            var = text.split('$$')[-1].strip().lower()
             for key in env.keys():
                 if key.lower().startswith(var.lower()):
                     yield Completion(f'{key}',
-                        start_position=-len(var),
+                        start_position=-len(var)-1,
                         display=HTML(f'<cyan>{key}</cyan>'),
                         display_meta='Variable'
                     )
 
-        # Логика вывода подсказок
-        elif text.endswith('@'):
-            # Удаляем "@" из конца текста
-            new_text = text[:-len('@')]
-            
-            # Получаем доступ к буферу и обновляем текст
-            # buffer = get_app().current_buffer
-            # cursor_position = buffer.cursor_position
-            # cursor_position = len(new_text)
-            # Обновляем текст и позицию курсора
-            # buffer.text = new_text
-            # buffer.cursor_position = cursor_position
-
-            # Получаем примеры команд
-            command = new_text.strip().lower()
-            examples = get_command_examples(command)
-            for example in examples:
-                    if example.lower().startswith(command):
-                        yield Completion(
-                            text=example,
-                            start_position=-len(text),
-                            display_meta='Example'
+        # Логика вывода подсказок, если в конце строки идет "!"
+        elif text.endswith('!'):
+            # Удаляем символ ! в конце строки, обрезаем пробелы, разбиваем на массив, забираем последнюю команду и опускаем регистр
+            last_command = text[:-1].strip().split(" ")[-1].lower()
+            # Проверяем, что последняя команда присутствует в массиве доступных команд и выводим для нее примеры
+            if last_command in command_cheat_list:
+                examples = get_command_examples(last_command)
+                for example in examples:
+                        if example.lower().startswith(last_command):
+                            if text[-2] == ' ':
+                                start_pos = -len(last_command)-2
+                            else:
+                                start_pos = -len(last_command)-1
+                            yield Completion(
+                                text = example,
+                                start_position = start_pos,
+                                display_meta = 'Example'
+                            )
+            # Если нет, пытаемся по ней выполнить поиск
+            else:
+                cur_text = text.split()[-1][:-1]
+                old_text = text.split()[-1]
+                for command in command_cheat_list:
+                    if command.lower().startswith(cur_text.lower()):
+                        yield Completion(f'{command}',
+                            start_position=-len(old_text),
+                            display=HTML(f'<cyan>{command}</cyan>'),
+                            display_meta='Command'
                         )
         
+        # Если последняя команда в строке ввода содержит текст после символа "!" дополняем из списка команд
+        elif text.split()[-1].startswith('!'):
+            cur_text = text.split()[-1][1:]
+            old_text = text.split()[-1]
+            for command in command_cheat_list:
+                if command.lower().startswith(cur_text.lower()):
+                    yield Completion(f'{command}',
+                        start_position=-len(old_text),
+                        display=HTML(f'<cyan>{command}</cyan>'),
+                        display_meta='Command'
+                    )
+
         # Фильтрация истории команд по введенному тексту
         else:
             # Опускаем регистр входного значения
@@ -458,7 +484,7 @@ def main():
     @bindings.add('c-f')
     def _(event):
         buffer = event.app.current_buffer
-        buffer.text += '@'
+        buffer.text += '!'
         buffer.cursor_position = len(buffer.text)
         buffer.start_completion()
     

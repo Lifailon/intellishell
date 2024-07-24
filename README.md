@@ -4,19 +4,17 @@
 
 <p align="center">
 <a href="https://github.com/Lifailon/intellishell"><img title="GitHub top language"src="https://img.shields.io/github/languages/top/Lifailon/intellishell?logo=Python&color=blue&"></a>
-<a href="https://github.com/Lifailon/intellishell"><img title="GitHub Release"src="https://img.shields.io/github/v/release/Lifailon/intellishell?include_prereleases&logo=Git&color=red&)](https://github.com/Lifailon/intellishell"></a>
-<a href="LICENSE"><img title="GitHub License"src="https://img.shields.io/github/license/Lifailon/intellishell?link=https%3A%2F%2Fgithub.com%2FLifailon%2Fintellishell%2Fblob%2Frsa%2FLICENSE&logo=GitHub&color=white&"></a>
+<a href="https://github.com/Lifailon/intellishell"><img title="GitHub Release"src="https://img.shields.io/github/v/release/Lifailon/intellishell?include_prereleases&logo=GitHub&color=green&)](https://github.com/Lifailon/intellishell"></a>
+<a href="LICENSE"><img title="GitHub License"src="https://img.shields.io/github/license/Lifailon/intellishell?link=https%3A%2F%2Fgithub.com%2FLifailon%2Fintellishell%2Fblob%2Frsa%2FLICENSE&logo=readme&color=white&"></a>
 </p>
 
 <p align="center">
     <img src="logo/insh.png">
 </p>
 
-This is a handler that runs on top of the `Bash` shell and implements an auto-completion mechanism using a dropdown list.
+This is a handler that runs on top of the Bash shell and implements command autocomplete using a dropdown list in real time.
 
-You can view the history of executed commands with support for filtering and regular expressions in real time by selecting and executing them from a list, and use directory navigation without leaving the current input line.
-
-In addition, searching for executable commands and displaying hints for them via [cheat.sh](https://github.com/chubin/cheat.sh) is supported.
+You can view the history of executed commands with support for filtering and regular expressions, select and execute them from a list, and use directory navigation without leaving the current input line. Additionally, it supports outputting variables and searching for executable commands and displaying a list of examples for them via [cheet.sh](https://github.com/chubin/cheat.sh).
 
 ---
 
