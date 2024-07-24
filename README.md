@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-    <img src="logo/insh.png">
+    <img src="image/logo.png">
 </p>
 
 This is a handler that runs on top of the Bash shell and implements command autocomplete using a dropdown list in real time.
@@ -28,7 +28,7 @@ You can view the history of executed commands with support for filtering and reg
 - [X] Auto-complete search for executable commands using the `!` or output cheat sheets for the last command entered in the line.
 - [ ] Performs a filtered search based on the output of the last command executed when the `@` character is used at the beginning of the input line. This can be used as an alternative to grep, which needs to be called every time the text in the filter query changes, or if you have previously used a soft terminal search but the output may have gone beyond it.
 
-> 💡 Because execution occurs in external and independent processes for each individual command, some actions may not perform as you expect (for example, calling functions repeatedly is not supported).
+> 💡 Because execution of each individual command occurs in external and independent processes, some actions may not perform as you expect. For example, calling functions again in subsequent commands is not supported, nor are any interactive scripts that require the user to provide input.
 
 ### ⌨️ Hotkeys:
 
