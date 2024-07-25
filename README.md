@@ -36,12 +36,12 @@ I created this little project to make working with the console easier and faster
 - [X] Integration with [cheat.sh](https://cheat.sh). Auto-complete search for executable commands using the `!` or output cheat sheets for the last command entered in the line.
 - [ ] Interactive [grep](https://www.gnu.org/software/grep). Performs a filtered search based on the output of the last command executed when the `@` character is used at the beginning of the input line. This can be used as an alternative to grep, which needs to be called every time the text in the filter query changes, or if you have previously used a soft terminal search but the output may have gone beyond it.
 
-#### 💡 To do:
+### 💡 To do:
 
 - [ ] Processing all commands in **one bash process**.
 - [ ] Automatic addition of options and keys for commands after the `-` character at the end of a line.
 
-#### ⌨️ Hotkeys:
+### ⌨️ Hotkeys:
 
 - `right` – select a command without executing it, which is convenient for continuing recording or moving to the next directory to quickly display its contents.
 - `backspace` - updates history to reflect changes.

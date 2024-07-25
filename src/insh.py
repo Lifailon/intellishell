@@ -166,10 +166,10 @@ class HistoryCompleter(Completer):
         # Фиксируем текущий текст в поле ввода
         text = document.text
 
-        # Ничего не делаем, если текст пустой
-        if not text:
+        # Ничего не делаем, если текст пустой или содержит только пробелы
+        if not text or text.isspace():
             return
-      
+
         # Логика автодополнения для команды cd
         if text.startswith('cd '):
             # Извлекаем запрос (удаляем команду cd и лишние пробелы по краям)
@@ -378,25 +378,54 @@ class HistoryCompleter(Completer):
                         display_meta = 'Variable'
                     )
 
+        # Логика вывода подсказок, если в начале строки идет "!" проверяем строку целиком
+        elif text.startswith('!'):
+            cur_text = text[1:].strip().lower().replace(" ","-")
+            for command in command_cheat_list:
+                command_replace = command.replace("-"," ")
+                if command.lower().startswith(cur_text.lower()):
+                    yield Completion(f'{command_replace}',
+                        start_position = -len(text),
+                        display = HTML(f'<cyan>{command_replace}</cyan>'),
+                        display_meta = 'Command'
+                    )
+
         # Логика вывода подсказок, если в конце строки идет "!"
         elif text.endswith('!'):
-            # Удаляем символ ! в конце строки, обрезаем пробелы, разбиваем на массив, забираем последнюю команду и опускаем регистр
-            last_command = text[:-1].strip().split(" ")[-1].lower()
-            # Проверяем, что последняя команда присутствует в массиве доступных команд и выводим для нее примеры
-            if last_command in command_cheat_list:
-                examples = get_command_examples(last_command)
-                for example in examples:
-                        if example.lower().startswith(last_command):
+            # Проверяем всю строку
+            line = text[:-1].strip().lower().replace(" ","-")
+            # Проверяем последнюю команду
+            last_command = text[:-1].strip().lower().split(" ")[-1]
+            # Проверяем, есть ли строка в массиве доступных команд
+            if line in command_cheat_list:
+                    line = line.replace("-"," ")
+                    examples = get_command_examples(line)
+                    for example in examples:
+                        if example.lower().startswith(line):
                             if text[-2] == ' ':
-                                start_pos = -len(last_command)-2
+                                start_pos = -len(line)-2
                             else:
-                                start_pos = -len(last_command)-1
+                                start_pos = -len(line)-1
                             yield Completion(
                                 text = example,
                                 start_position = start_pos,
                                 display_meta = 'Example'
                             )
-            # Если нет, пытаемся по ней выполнить поиск команд для автоматического завершения
+            # Проверяем, что последняя команда присутствует в массиве команд
+            elif last_command in command_cheat_list:
+                examples = get_command_examples(last_command)
+                for example in examples:
+                    if example.lower().startswith(last_command):
+                        if text[-2] == ' ':
+                            start_pos = -len(last_command)-2
+                        else:
+                            start_pos = -len(last_command)-1
+                        yield Completion(
+                            text = example,
+                            start_position = start_pos,
+                            display_meta = 'Example'
+                        )
+            # Если примеры не найдены, пытаемся по последней команде выполнить поиск для автоматического завершения
             else:
                 cur_text = text.split()[-1][:-1]
                 old_text = text.split()[-1]
