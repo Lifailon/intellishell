@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+
+import argparse
 import os
 import re
 import subprocess
@@ -10,10 +13,17 @@ from prompt_toolkit.history import InMemoryHistory
 from prompt_toolkit.formatted_text import HTML
 from prompt_toolkit.key_binding import KeyBindings
 
-# Интерпритатор по умолчанию
-SHELL = '/bin/bash'
+# Обработка аргументов
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    '--shell',
+    type=str,
+    default='/bin/bash'
+)
+args = parser.parse_args()
+SHELL = args.shell
 
-# Список команд для обработки автодополнения вывода списка директорий и файлов
+# Список команд для обработки автодополнения вывода директорий и файлов
 commands = (
     'ls ',
     'cat ',
@@ -23,7 +33,7 @@ commands = (
     'mcedit '
 )
 
-# Функция загрузки истории
+# Функция загрузки истории из файла
 def load_history(history_file):
     if not os.path.exists(history_file):
         return []
@@ -61,7 +71,7 @@ def get_files_and_dir(path):
     except FileNotFoundError:
         return []
 
-# Функция получения списка команд
+# Функция получения списка команд установленных в системе
 def get_exec_commands():
     commands = set()
     # Получаем список всех директорий из переменной PATH
@@ -75,7 +85,7 @@ def get_exec_commands():
                     commands.add(filename)
     return sorted(commands)
 
-# Получаем список доступных команд:
+# Функция получения списка команд через сервис cheat.sh (https://github.com/chubin/cheat.sh)
 def get_cheat_commands():
     try:
         sheet_url = "https://cheat.sh/:list"
@@ -85,11 +95,9 @@ def get_cheat_commands():
         lines = content.splitlines()
         commands = [line for line in lines]
         return sorted(commands)
+    # Если сервис недоступен, получаем список команд из предыдущей функции
     except requests.RequestException:
         return get_exec_commands()
-
-# Фиксируем список команд при запуске
-command_cheat_list = get_cheat_commands()
 
 # Функция подсказок
 def get_command_examples(command):
@@ -100,11 +108,11 @@ def get_command_examples(command):
         content = response.text
         # Разбиваем содержимое на строки
         lines = content.splitlines()
-        # Фильтруем и очищаем строки
         commands = []
+        # Фильтруем вывод
         for line in lines:
             line = line.strip()
-            if line and not line.startswith(('#', 'tags:', '---', 'tldr:', 'cheat:')):
+            if line and not line.startswith(('#', '---', 'tags:', 'tldr:', 'cheat:')):
                 # Удаляем ANSI коды цвета
                 line = re.sub(r'\x1b\[[0-9;]*m', '', line)
                 # Удаляем лишние комментарии в конце строки
@@ -116,7 +124,10 @@ def get_command_examples(command):
     except requests.RequestException:
         return ["Command not found"]
 
-# Фиксируем переменные системного окружения при запуске
+# Фиксируем список команд при запуске
+command_cheat_list = get_cheat_commands()
+
+# Фиксируем переменные окружения при запуске
 env = os.environ.copy()
 
 # Функция обновления переменных текущего окружения при соблюдении условий регулярных выражений
@@ -127,7 +138,7 @@ def env_update(cmd, env):
     # Регулярное выражение для поиска исполняемых переменных через $()
     dynamic_pattern = re.compile(r'^([^-\s=]+)=\$\((.*?)\)$', re.IGNORECASE)
     matches = dynamic_pattern.findall(cmd)
-    # Обновляем переменные
+    # Обновляем переменную с последующем выполнением ее содержимого и повторным обновлением содержимого полученным результатом 
     for var, value in matches:
         # Удаляем $() в начале и конце строки
         cleaned_value = re.sub(r'^\$\(\s*|\s*\)$', '', value)
@@ -145,6 +156,7 @@ def env_update(cmd, env):
 
     return updated
 
+# Основной класс обработки автоматического завершения
 class HistoryCompleter(Completer):
     def __init__(self, history):
         # Читаем историю команд
@@ -169,7 +181,7 @@ class HistoryCompleter(Completer):
             else:
                 path_to_complete = os.path.join(os.getcwd(), text_suffix)
 
-            # Определяем, нужно ли показывать содержимое директории (/) или использовать автоматическое дополнение
+            # Определяем, нужно ли показывать содержимое директории (/)
             if text_suffix.endswith('/'):
                 dirs = get_directories(path_to_complete)
                 for d in dirs:
@@ -180,6 +192,7 @@ class HistoryCompleter(Completer):
                         display = HTML(f'<green>{d}</green>'),
                         display_meta = 'Directory'
                     )
+            # Или использовать автоматическое дополнение
             else:
                 base_path = os.path.dirname(path_to_complete)
                 partial_name = os.path.basename(path_to_complete)
@@ -383,7 +396,7 @@ class HistoryCompleter(Completer):
                                 start_position = start_pos,
                                 display_meta = 'Example'
                             )
-            # Если нет, пытаемся по ней выполнить поиск
+            # Если нет, пытаемся по ней выполнить поиск команд для автоматического завершения
             else:
                 cur_text = text.split()[-1][:-1]
                 old_text = text.split()[-1]
@@ -451,7 +464,7 @@ def execute_command(cmd, history, history_file):
     # Добавляем команду в историю перед выполнением
     add_to_history(cmd, history, history_file)
     
-    # Обработка команды 'cd' в текущем процессе Python
+    # Обработка команды "cd" в текущем процессе Python
     if cmd.startswith('cd '):
         try:
             target_dir = cmd[2:].strip()
@@ -519,13 +532,13 @@ def main():
     history_file = os.path.expanduser('~/.bash_history')
     history = load_history(history_file)
     
-    # Создание объекта истории ввода
+    # Создание объекта истории ввода в текущем процессе
     session_history = InMemoryHistory()
 
     # Создание объекта автодополнения с историей команд
     completer = HistoryCompleter(history)
 
-    # Значение времени выполнения команды по умолчанию
+    # Значение времени выполнения команды по умолчанию при запуске
     last_execution_time = 0
 
     # Переопределяем действия нажатия клавиш
