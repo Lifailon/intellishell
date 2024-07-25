@@ -36,30 +36,32 @@ I created this little project to make working with the console easier and faster
 - [X] Integration with [cheat.sh](https://cheat.sh). Auto-complete search for executable commands using the `!` or output cheat sheets for the last command entered in the line.
 - [ ] Interactive [grep](https://www.gnu.org/software/grep). Performs a filtered search based on the output of the last command executed when the `@` character is used at the beginning of the input line. This can be used as an alternative to grep, which needs to be called every time the text in the filter query changes, or if you have previously used a soft terminal search but the output may have gone beyond it.
 
-To read the output of the last command, a **second thread is used**. To compare performance on my 1 core system I used cat to read the output of a 160k lines file which takes on average 4 seconds, when using two threads the reading time increases on 200-300 milliseconds.
+To read the output of the last command, a **second thread is used**. To compare performance on my 1 core system I used `cat` to read the output of a 160k lines file which takes on average 4 seconds, when using two threads the reading time increases on 300-400 milliseconds.
 
 ### 💡 To do:
 
 - [ ] Process all commands in **one persistent bash process**.
-- [ ] Automatic addition of options and keys for commands after the `-` character at the end of a line.
+- [ ] Automatic addition of options for commands after the `-` character at the end of a line.
 
 ### ⌨️ Hotkeys:
 
 - `right` – select a command without executing it, which is convenient for continuing recording or moving to the next directory to quickly display its contents.
-- `backspace` - updates history to reflect changes.
-- `ctrl+c` - clears the current input line (buffer) without moving to a new line or ends the execution of the command being executed.
+- `backspace` - in addition to deleting, updates the history to reflect the changes.
+- `ctrl+c` - clears the current input line (buffer) without moving to a new line and does not terminate the executed command (has no effect on stopping a running program, which can also be interrupted).
 - `ctrl+l` - completely clears the output console without affecting the input console and without changing the last execution command.
 - `ctrl+q` - hides the drop-down list until the next input.
 
 ### 🚀 Install
 
-To work, you need to install the Python [prompt-toolkit](https://github.com/prompt-toolkit/python-prompt-toolkit) library on the system, which is responsible for creating a drop-down list (no other dependencies are required):
+To work, you need to install the Python [prompt-toolkit](https://github.com/prompt-toolkit/python-prompt-toolkit) library on the system, which is responsible for creating a drop-down list:
 
 ```shell
 pip install prompt_toolkit
 ```
 
 If you have any difficulties with installation, please refer to the [official manual](https://python-prompt-toolkit.readthedocs.io/en/stable/pages/getting_started.html#installation).
+
+Other dependencies in the form of external libraries are not required.
 
 Download the script to the system and set access rights:
 
@@ -76,7 +78,7 @@ export PATH="$HOME/.local/bin:$PATH"
 source ~/.bashrc
 ```
 
-To run, use the `insh` command. If you get errors, simply change the version of the Python interpreter for which the **prompt-toolkit** library was installed in **hebang**:
+To run, use the `insh` command. If you get errors, simply change in **hebang** the version of the Python interpreter for which the **prompt-toolkit** library was installed:
 
 ```shell
 pythonVersion=python3.10
