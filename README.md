@@ -22,7 +22,7 @@ You can view the history of executed commands with support for filtering and reg
 
 I created this little project to make working with the console easier and faster. I haven't been able to find a solution for passing commands within a single session (examples can be found in the [test](test/) directory).
 
-> 💡 Because execution of each individual command occurs in external and independent processes, some actions may not perform as you expect. For example, calling functions again in subsequent commands is not supported, nor are any interactive scripts that require the user to provide input.
+> Because execution of each individual command occurs in external and independent processes, some actions may not perform as you expect. For example, calling functions again in subsequent commands is not supported, nor are any interactive scripts that require the user to provide input.
 
 ---
 
@@ -32,9 +32,11 @@ I created this little project to make working with the console easier and faster
 - [X] Support for regular expressions during filtering, taking into account the position of entered phrases in the command using the `^` character at the beginning or end of a line (by default, the search is performed regardless of the position of entered phrases separated by a space).
 - [x] Navigation through directories using `cd` and selecting files for reading via `cat`, `nano`, `vim` and `mcedit`, as well as copying via `cp` and `mv`.
 - [x] Captures and displays the execution time of the last executed command in the spirit of `oh-my-bash`.
-- [X] A mechanism for storing and passing variables of the current process to an external executable process has been implemented (⚠️ **may work unstable**), and also output of all variables via the `$$` symbol is supported.
+- [X] A mechanism for storing and passing variables of the current process to an external executable process has been implemented (**may work unstable**), and also output of all variables via the `$$` symbol is supported.
 - [X] Integration with [cheat.sh](https://cheat.sh). Auto-complete search for executable commands using the `!` or output cheat sheets for the last command entered in the line.
 - [ ] Interactive [grep](https://www.gnu.org/software/grep). Performs a filtered search based on the output of the last command executed when the `@` character is used at the beginning of the input line. This can be used as an alternative to grep, which needs to be called every time the text in the filter query changes, or if you have previously used a soft terminal search but the output may have gone beyond it.
+- [ ] Processing all commands in **one bash process**.
+- [ ] Automatic addition of options and keys for commands after the `-` character at the end of a line.
 
 ### ⌨️ Hotkeys:
 
@@ -70,8 +72,6 @@ source ~/.bashrc
 ```
 
 To run, use the `insh` command. If you get errors, simply change the version of the Python interpreter for which the **prompt-toolkit** library was installed in **hebang**:
-
-#!/bin/bash
 
 ```shell
 pythonVersion=python3.10
