@@ -46,7 +46,6 @@ def load_history(history_file):
         history = list(dict.fromkeys(reversed_history))
     return history
 
-
 # Функция добавления команды в историю
 def add_to_history(cmd, history, history_file):
     # Если команда уже есть в истории, удаляем ее
@@ -101,7 +100,7 @@ def get_cheat_commands():
     except requests.RequestException:
         return get_exec_commands()
 
-# Функция подсказок
+# Функция подсказок для выпадающего списка
 def get_command_examples(command):
     try:
         sheet_url = f"https://cheat.sh/{command}"
@@ -125,6 +124,15 @@ def get_command_examples(command):
         return commands
     except requests.RequestException:
         return ["Command not found"]
+
+# Функция подсказок для вывода на экран
+def get_print_examples(command):
+    command = command.replace(" ", "+")
+    sheet_url = f"https://cheat.sh/{command}?Q"
+    response = requests.get(sheet_url)
+    response.raise_for_status()
+    content = response.text
+    return print(content)
 
 # Фиксируем список команд при запуске
 command_cheat_list = get_cheat_commands()
@@ -176,7 +184,7 @@ class HistoryCompleter(Completer):
             return
         
         # Обработка поиска по содержимому вывода последней исполнямоей команды
-        if text.startswith('@'):
+        elif text.startswith('@'):
             search_text = text[1:].lower()
             words = search_text.split()  # Разделяем search_text на слова
             lines = last_command_output.split('\n')
@@ -709,6 +717,12 @@ def main():
             
             # Выполнение команды
             if user_input:
+                # Если в конце ввода есть два символ "!" отдаем подсказки в выводе
+                if user_input.endswith('!!'):
+                    line = user_input[:-2].strip().lower()
+                    get_print_examples(line)
+                    continue
+
                 # Выполняем команду и получаем время выполнения из вывода функции
                 last_execution_time = execute_command(user_input, history, history_file)
                 # Обновляем комплитер с новой историей
