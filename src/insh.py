@@ -3,10 +3,12 @@
 import argparse
 import os
 import re
-import subprocess
-import signal
-import time
 import requests
+import time
+import subprocess
+import io
+import threading
+import signal
 from prompt_toolkit.completion import Completer, Completion
 from prompt_toolkit.shortcuts import prompt
 from prompt_toolkit.history import InMemoryHistory
@@ -127,6 +129,9 @@ def get_command_examples(command):
 # Фиксируем список команд при запуске
 command_cheat_list = get_cheat_commands()
 
+# Глобальная переменная для хранения вывода последней команды
+last_command_output = ""
+
 # Фиксируем переменные окружения при запуске
 env = os.environ.copy()
 
@@ -169,9 +174,22 @@ class HistoryCompleter(Completer):
         # Ничего не делаем, если текст пустой или содержит только пробелы
         if not text or text.isspace():
             return
+        
+        # Обработка поиска по содержимому вывода последней исполнямоей команды
+        if text.startswith('@'):
+            search_text = text[1:].lower()
+            words = search_text.split()  # Разделяем search_text на слова
+            lines = last_command_output.split('\n')
+            for entry in lines:
+                entry_lower = entry.lower()
+                if all(word in entry_lower for word in words):
+                    yield Completion(
+                        entry,
+                        start_position=-len(text)
+                    )
 
         # Логика автодополнения для команды cd
-        if text.startswith('cd '):
+        elif text.startswith('cd '):
             # Извлекаем запрос (удаляем команду cd и лишние пробелы по краям)
             text_suffix = text[2:].strip()
 
@@ -487,9 +505,10 @@ class HistoryCompleter(Completer):
                             entry,
                             start_position = -len(text)
                         )
-        
+
 # Функция выполнения команды
 def execute_command(cmd, history, history_file):
+    global last_command_output
     # Добавляем команду в историю перед выполнением
     add_to_history(cmd, history, history_file)
     
@@ -534,21 +553,64 @@ def execute_command(cmd, history, history_file):
     # Фиксируем время запуска
     start_time = time.time()
 
-    # Запуск выполнения команды в отдельном процессе с указанием интерпритатора и передачей переменных
-    process = subprocess.Popen(
-        [SHELL, '-c', cmd],
-        env=env,
-        preexec_fn=os.setsid
-    )
-    
-    # Ожидание завершения процесса
+    # Флаг для сигнализации потокам о необходимости завершения
+    stop_threads = threading.Event()
+
+    # Создаем буфер для хранения вывода
+    output_buffer = io.StringIO()
+
+    # Функция для чтения вывода в отдельном потоке
+    def read_output(pipe, buffer):
+        try:
+            for line in iter(pipe.readline, ''):
+                if stop_threads.is_set():
+                    break
+                print(line, end='', flush=True)
+                buffer.write(line)
+        # Игнорируем ошибки, связанные с закрытым потоком или буфером
+        except (ValueError, IOError):
+            pass
+
     try:
+        # Запуск выполнения команды в отдельном процессе с указанием интерпритатора и передачей переменных
+        process = subprocess.Popen(
+            [SHELL, '-c', cmd],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True, 
+            env=env,
+            preexec_fn=os.setsid,
+            bufsize=1
+        )
+        
+        # Запускаем потоки для чтения вывода и ошибок
+        stdout_thread = threading.Thread(target=read_output, args=(process.stdout, output_buffer))
+        stderr_thread = threading.Thread(target=read_output, args=(process.stderr, output_buffer))
+        stdout_thread.start()
+        stderr_thread.start()
+        
+        # Ожидаем завершения процесса
         process.wait()
+        
+        # Ожидаем завершения потоков чтения
+        stdout_thread.join()
+        stderr_thread.join()
+        
     # Обработка прерывания выполняемого процесса (принудительное завершение)
     except KeyboardInterrupt:
         print("")
         os.killpg(os.getpgid(process.pid), signal.SIGTERM)
-        process.wait()
+        stop_threads.set()
+        process.stdout.close()
+        process.stderr.close()
+        stdout_thread.join(timeout=1)
+        stderr_thread.join(timeout=1)
+
+    finally:
+        # Сохраняем вывод в переменную
+        last_command_output = output_buffer.getvalue()
+        # Закрываем буфер
+        output_buffer.close()
 
     # Фиксируем время завершения
     end_time = time.time()

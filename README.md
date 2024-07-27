@@ -17,7 +17,7 @@ This is a handler that runs on top of the Bash shell and implements command auto
 You can view the history of executed commands with support for filtering and regular expressions, select and execute them from a list, and use directory navigation without leaving the current input line. In addition, it supports outputting variables, searching with filtering by the output of the last executed command, searching for executable commands and displaying a list of examples for them via [cheet.sh](https://github.com/chubin/cheat.sh).
 
 <p align="center">
-    <img src="image/example-01.gif" width="700" height="500">
+    <img src="image/example-01.gif"
 </p>
 
 I created this little project to make working with the console easier and faster. I haven't been able to find a solution for passing commands within a single session (examples can be found in the [test](test/) directory).
@@ -34,14 +34,20 @@ I created this little project to make working with the console easier and faster
 - [x] Captures and displays the execution time of the last executed command in the spirit of `oh-my-bash`.
 - [X] A mechanism for storing and passing variables of the current process to an external executable process has been implemented (**may work unstable**), and also output of all variables via the `$$` symbol is supported.
 - [X] Integration with [cheat.sh](https://cheat.sh). Auto-complete search for executable commands using the `!` or output cheat sheets for the last command entered in the line.
-- [ ] Interactive [grep](https://www.gnu.org/software/grep). Performs a filtered search based on the output of the last command executed when the `@` character is used at the beginning of the input line. This can be used as an alternative to grep, which needs to be called every time the text in the filter query changes, or if you have previously used a soft terminal search but the output may have gone beyond it.
+- [X] Interactive [grep](https://www.gnu.org/software/grep). Performs a filtered search based on the output of the last command executed when the `@` character is used at the beginning of the input line. This can be used as an alternative to grep, which needs to be called every time the text in the filter query changes, or if you have previously used a soft terminal search but the output may have gone beyond it.
+
+<p align="center">
+    <img src="image/example-02.gif"
+</p>
 
 To read the output of the last command, a **second thread is used**. To compare performance on my 1 core system I used `cat` to read the output of a 160k lines file which takes on average 4 seconds, when using two threads the reading time increases on 300-400 milliseconds.
 
+Use two `!` characters at the end of a line and call it to get extended prompts with command comments or a brief syntax example, such as `js function !!` or `js functions !!`
+
 ### 💡 To do:
 
-- [ ] Process all commands in **one persistent bash process**.
-- [ ] Automatic addition of options for commands after the `-` character at the end of a line.
+- [ ] Process all commands in **one persistent bash process** (for example, using `pexpect`).
+- [ ] Automatic addition of options for commands after the `-` character at the end of a line (for example, using `compgen`).
 
 ### ⌨️ Hotkeys:
 
