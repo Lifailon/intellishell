@@ -3,9 +3,10 @@
 </h1>
 
 <p align="center">
-<a href="https://github.com/Lifailon/intellishell"><img title="GitHub top language"src="https://img.shields.io/github/languages/top/Lifailon/intellishell?logo=Python&color=blue&"></a>
-<a href="https://github.com/Lifailon/intellishell"><img title="GitHub Release"src="https://img.shields.io/github/v/release/Lifailon/intellishell?include_prereleases&logo=GitHub&color=green&)](https://github.com/Lifailon/intellishell"></a>
-<a href="LICENSE"><img title="GitHub License"src="https://img.shields.io/github/license/Lifailon/intellishell?link=https%3A%2F%2Fgithub.com%2FLifailon%2Fintellishell%2Fblob%2Frsa%2FLICENSE&logo=readme&color=white&"></a>
+    <a href="https://pypi.org/project/intellishell"><img title="PyPi"src="https://img.shields.io/pypi/v/intellishell"></a>
+    <a href="https://github.com/Lifailon/intellishell"><img title="GitHub top language"src="https://img.shields.io/github/languages/top/Lifailon/intellishell?logo=Python&color=blue"></a>
+    <a href="https://github.com/Lifailon/intellishell"><img title="GitHub Release"src="https://img.shields.io/github/v/release/Lifailon/intellishell?include_prereleases&logo=GitHub&color=green&)](https://github.com/Lifailon/intellishell"></a>
+    <a href="LICENSE"><img title="GitHub License"src="https://img.shields.io/github/license/Lifailon/intellishell?link=https%3A%2F%2Fgithub.com%2FLifailon%2Fintellishell%2Fblob%2Frsa%2FLICENSE&logo=readme&color=white&"></a>
 </p>
 
 <p align="center">
@@ -94,7 +95,23 @@ test condition && echo "true" || echo "false"
 - `ctrl+l` - completely clears the output console without affecting the input console and without changing the last execution command.
 - `ctrl+q` - hides the drop-down list until the next input.
 
-### 🚀 Install
+---
+
+### 🚀 Install from PyPi
+
+For quick installation on your system, use the PyPi package manager:
+
+```shell
+pip install intellishell
+```
+
+To run use the command:
+
+```shell
+insh
+```
+
+### 🔨 Install from GitHub
 
 To work, you need to install the Python [prompt-toolkit](https://github.com/prompt-toolkit/python-prompt-toolkit) library on the system, which is responsible for creating a drop-down list:
 
