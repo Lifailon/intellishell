@@ -25,6 +25,10 @@ parser.add_argument(
 args = parser.parse_args()
 SHELL = args.shell
 
+# Создаем временный файл для хранения переменных и функций текущей сессии (для передачи их между подпроцессами bash)
+env_session_temp = '/tmp/insh_env_session.temp'
+subprocess.Popen([SHELL, '-c', f'declare -p | grep "^declare -- " > {env_session_temp}'])
+
 # Список команд для обработки автодополнения вывода директорий и файлов
 commands = (
     'ls ',
@@ -529,10 +533,15 @@ class HistoryCompleter(Completer):
 
 # Функция выполнения команды
 def execute_command(cmd, history, history_file):
+    # Объявляем/обновляем переменную для хранения вывода команды
     global last_command_output
+    
     # Добавляем команду в историю перед выполнением
     add_to_history(cmd, history, history_file)
     
+    # Загружаем переменные и функции из файла перед выполнением основной команды
+    cmd = f'source {env_session_temp}; ' + cmd
+
     # Обработка команды в отдельном процессе, блокируя (wait) текущий процесс до завершения
     for exception in exceptions:
         if cmd.startswith(exception) or cmd.endswith("top"):
@@ -603,19 +612,21 @@ def execute_command(cmd, history, history_file):
             pass
 
     try:
+        # Записываем переменные и функции временной сессии в файл, после выполнения команды
+        cmd += f'; declare -p | grep "^declare -- " > {env_session_temp}; declare -f >> {env_session_temp}'
         # Запуск выполнения команды в отдельном процессе с указанием интерпритатора и передачей переменных
         process = subprocess.Popen(
             [
                 SHELL,
-                '--norc',
-                '--noprofile',
+                # '--norc',
+                # '--noprofile',
                 '-c',
                 cmd
             ],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True, 
-            env=env,
+            # env=env,
             preexec_fn=os.setsid,
             bufsize=1
         )
@@ -742,6 +753,9 @@ def main():
             
             # Выход из цикла при вводе 'exit'
             if user_input.lower() == 'exit':
+                # Удаляем временный файл
+                if os.path.exists(env_session_temp):
+                    os.remove(env_session_temp)
                 break
             
             # Выполнение команды
