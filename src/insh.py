@@ -31,8 +31,21 @@ commands = (
     'cat ',
     'stat ',
     'nano ',
+    'vi ',
     'vim ',
-    'mcedit '
+    'emacs ',
+    'mcedit ',
+    'micro '
+)
+
+# Список команд исключений для обработки в процессе с блокировской
+exceptions = (
+    'nano',
+    'vi',
+    'mc',
+    'emacs',
+    'micro',
+    'lazy'
 )
 
 # Функция загрузки истории из файла
@@ -520,6 +533,16 @@ def execute_command(cmd, history, history_file):
     # Добавляем команду в историю перед выполнением
     add_to_history(cmd, history, history_file)
     
+    # Обработка команды в отдельном процессе, блокируя (wait) текущий процесс до завершения
+    for exception in exceptions:
+        if cmd.startswith(exception) or cmd.endswith("top"):
+            try:
+                process = subprocess.Popen(cmd, shell=True, preexec_fn=os.setsid)
+                process.wait()
+            except Exception as e:
+                print(f"Error running {exception}: {e}")
+            return
+
     # Обработка команды "cd" в текущем процессе Python
     if cmd.startswith('cd '):
         try:
@@ -529,34 +552,34 @@ def execute_command(cmd, history, history_file):
             print(f"Incorrect path")
         return
     
-    # Имитируем обработку присвоения переменных
-    env_type = env_update(cmd, env)
+    # # Имитируем обработку присвоения переменных
+    # env_type = env_update(cmd, env)
     
-    # Если переменная является статической, обновляем ее в функции и завершаем эту
-    if env_type == "__static__":
-        return
+    # # Если переменная является статической, обновляем ее в функции и завершаем эту
+    # if env_type == "__static__":
+    #     return
 
-    # Если переменная динамическая
-    elif env_type != "__none__" and env_type != "__static__":
-        # Забираем значение переменной по ключу
-        value_from_key = env.get(env_type, "")
-        if value_from_key:
-            try:
-                result = subprocess.run(
-                    [SHELL, '-c', value_from_key],
-                    env=env,
-                    check=True,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    text=True
-                )
-                # Забираем вывод успешного выполнения (stdout) и обновляем переменную по ключу
-                cleaned_value = result.stdout.strip()
-                env[env_type] = cleaned_value
-            except subprocess.CalledProcessError as e:
-                # В случае ошибки выводим ее на экран
-                print(f"Error execut command '{value_from_key}': {e.stderr}")
-        return
+    # # Если переменная динамическая
+    # elif env_type != "__none__" and env_type != "__static__":
+    #     # Забираем значение переменной по ключу
+    #     value_from_key = env.get(env_type, "")
+    #     if value_from_key:
+    #         try:
+    #             result = subprocess.run(
+    #                 [SHELL, '-c', value_from_key],
+    #                 env=env,
+    #                 check=True,
+    #                 stdout=subprocess.PIPE,
+    #                 stderr=subprocess.PIPE,
+    #                 text=True
+    #             )
+    #             # Забираем вывод успешного выполнения (stdout) и обновляем переменную по ключу
+    #             cleaned_value = result.stdout.strip()
+    #             env[env_type] = cleaned_value
+    #         except subprocess.CalledProcessError as e:
+    #             # В случае ошибки выводим ее на экран
+    #             print(f"Error execut command '{value_from_key}': {e.stderr}")
+    #     return
 
     # Фиксируем время запуска
     start_time = time.time()
@@ -582,7 +605,13 @@ def execute_command(cmd, history, history_file):
     try:
         # Запуск выполнения команды в отдельном процессе с указанием интерпритатора и передачей переменных
         process = subprocess.Popen(
-            [SHELL, '-c', cmd],
+            [
+                SHELL,
+                '--norc',
+                '--noprofile',
+                '-c',
+                cmd
+            ],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True, 
@@ -615,7 +644,7 @@ def execute_command(cmd, history, history_file):
         stderr_thread.join(timeout=1)
 
     finally:
-        # Сохраняем вывод в переменную
+        # Сохраняем вывод в глобальную переменную для поиска через @
         last_command_output = output_buffer.getvalue()
         # Закрываем буфер
         output_buffer.close()
