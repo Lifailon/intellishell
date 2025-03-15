@@ -31,7 +31,6 @@ subprocess.Popen([SHELL, '-c', f'declare -p | grep "^declare -- " > {env_session
 
 # Список команд для обработки автодополнения вывода директорий и файлов
 commands = (
-    'ls ',
     'cat ',
     'stat ',
     'nano ',
@@ -89,7 +88,21 @@ def get_files_and_dir(path):
     except FileNotFoundError:
         return []
 
-# Функция получения списка команд установленных в системе
+# Функция получения списка уникальных команд из compgen
+def get_compgen_commands():
+    process = subprocess.Popen(
+        ['bash', '-c', 'compgen -c | sort | uniq'],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True
+    )
+    stdout, stderr = process.communicate()
+    if stderr:
+        print(stderr)
+    commands = set(stdout.splitlines())
+    return sorted(commands)
+
+# Функция получения списка команд установленных в системе из $PATH
 def get_exec_commands():
     commands = set()
     # Получаем список всех директорий из переменной PATH
@@ -113,7 +126,7 @@ def get_cheat_commands():
         lines = content.splitlines()
         commands = [line for line in lines]
         return sorted(commands)
-    # Если сервис недоступен, получаем список команд из предыдущей функции
+    # Если сервис недоступен, получаем список команд из $PATH
     except requests.RequestException:
         return get_exec_commands()
 
@@ -152,7 +165,8 @@ def get_print_examples(command):
     return print(content)
 
 # Фиксируем список команд при запуске
-command_cheat_list = get_cheat_commands()
+# command_cheat_list = get_cheat_commands()
+command_cheat_list = get_compgen_commands()
 
 # Глобальная переменная для хранения вывода последней команды
 last_command_output = ""
@@ -301,8 +315,14 @@ class HistoryCompleter(Completer):
                             )
 
         # Логика автодополнения для команд cp и mv
-        elif any(text.startswith(cmd) for cmd in ['cp ', 'mv ']):
+        elif any(text.startswith(cmd) for cmd in ['cp ', 'mv ', 'ls ', 'rm ']):
+            # Извлекаем команду
             command = text.split()[0]
+            # Извлекаем ключи
+            if len(text.split()) > 1:
+                if text.split()[1].startswith('-'):
+                    command += " "
+                    command += text.split()[1]
             # Извлекаем аргументы команды
             arguments = text[len(command):].strip().split()
             
@@ -547,10 +567,7 @@ def execute_command(cmd, history, history_file):
     # Добавляем команду в историю перед выполнением
     add_to_history(cmd, history, history_file)
     
-    # Загружаем переменные и функции из файла перед выполнением основной команды
-    cmd = f'source {env_session_temp}; ' + cmd
-
-    # Обработка команды в отдельном процессе, блокируя (wait) текущий процесс до завершения
+    # Исключения: обработка команд в отдельном процессе bash, блокируя (wait) текущий процесс до завершения
     for exception in exceptions:
         if cmd.startswith(exception) or cmd.endswith("top"):
             try:
@@ -568,8 +585,11 @@ def execute_command(cmd, history, history_file):
         except Exception as e:
             print(f"Incorrect path")
         return
-    
-    # # Имитируем обработку присвоения переменных
+
+    # Загружаем переменные и функции из файла перед выполнением основной команды
+    cmd = f'source {env_session_temp}; ' + cmd
+
+    # # Имитируем обработку присвоения переменных (ОТКЛЮЧЕНО, вместо этого используется declare и source)
     # env_type = env_update(cmd, env)
     
     # # Если переменная является статической, обновляем ее в функции и завершаем эту
