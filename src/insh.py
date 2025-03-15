@@ -409,14 +409,22 @@ class HistoryCompleter(Completer):
                                     display_meta = 'File'
                                 )
 
-        # Логика вывода списка переменных через два символа "$" в конце строки
-        elif text.split()[-1].startswith('$$'):
+        # Логика вывода списка переменных по символу "$" в конце строки
+        elif text.split()[-1].startswith('$'):
             # Забираем текст после последнего символа "$"
-            var = text.split('$$')[-1].strip().lower()
-            for key in env.keys():
+            var = text.split('$')[-1].strip().lower()
+            # Извлекаем ключи (название) переменных
+            keys = []
+            with open(env_session_temp, "r") as file:
+                for line in file:
+                    # Фильтруем только строки с переменными
+                    if line.startswith("declare -- "):
+                        var_name = line.split("declare -- ")[1].split("=")[0]
+                        keys.append(var_name)
+            for key in keys:
                 if key.lower().startswith(var.lower()):
                     yield Completion(f'{key}',
-                        start_position = -len(var)-1,
+                        start_position = -len(var),
                         display = HTML(f'<cyan>{key}</cyan>'),
                         display_meta = 'Variable'
                     )
