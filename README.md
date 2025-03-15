@@ -13,96 +13,20 @@
     <img src="image/logo.png">
 </p>
 
-This is a handler that runs on top of the Bash shell and implements command autocomplete using a dropdown list in real time.
+This is a handler running on top of the Bash shell that implements real-time command history completion from a drop-down list using the [Prompt Toolkit](https://github.com/prompt-toolkit/python-prompt-toolkit) library.
 
-You can view the history of executed commands with support for filtering and regular expressions, select and execute them from a list, and use directory navigation without leaving the current input line. In addition, it supports outputting variables, searching with filtering by the output of the last executed command, searching for executable commands and displaying a list of examples for them via [cheet.sh](https://github.com/chubin/cheat.sh).
-
-<p align="center">
-    <img src="image/example-01.gif"
-</p>
-
-I created this little project to make working with the console easier and faster. I haven't been able to find a solution for passing commands within a single session (examples can be found in the [test](test/) directory).
-
-> Because execution of each individual command occurs in external and independent processes, some actions may not perform as you expect. For example, calling functions again in subsequent commands is not supported, nor are any interactive scripts that require the user to provide input.
-
----
-
-### ✨ Implemented:
-
-- [x] History filtering (takes into account the order of execution with duplicates excluded) and running the selected command (using the `Enter` button) from a drop-down list in an *external process* with support for recording executed commands in the history.
-- [X] Support for regular expressions during filtering, taking into account the position of entered phrases in the command using the `^` character at the beginning or end of a line (by default, the search is performed regardless of the position of entered phrases separated by a space).
-- [x] Navigation through directories using `cd` and selecting files for reading via `cat`, `nano`, `vim` and `mcedit`, as well as copying via `cp` and `mv`.
-- [x] Captures and displays the execution time of the last executed command in the spirit of `oh-my-bash`.
-- [X] A mechanism for storing and passing variables of the current process to an external executable process has been implemented (**may work unstable**), and also output of all variables via the `$$` symbol is supported.
-- [X] Integration with [cheat.sh](https://cheat.sh). Auto-complete search for executable commands using the `!` or output cheat sheets for the last command entered in the line.
-- [X] Interactive [grep](https://www.gnu.org/software/grep). Performs a filtered search based on the output of the last command executed when the `@` character is used at the beginning of the input line. This can be used as an alternative to grep, which needs to be called every time the text in the filter query changes, or if you have previously used a soft terminal search but the output may have gone beyond it.
+Why do need this when there are many other great solutions, such as [hstr](https://github.com/dvorka/hstr) and [mcfly](https://github.com/cantino/mcfly)? It's simple, I find it inconvenient to call a separate interface for navigating through history, I am used to using [PowerShell Core](https://github.com/PowerShell/PowerShell) in Windows or Linux (activated by pressing `F2`), which has become standard for me.
 
 <p align="center">
-    <img src="image/example-02.gif"
+    <img src="image/example.gif"
 </p>
 
-To read the output of the last command, a **second thread is used**. To compare performance on my 1 core system I used `cat` to read the output of a 160k lines file which takes on average 4 seconds, when using two threads the reading time increases on 300-400 milliseconds.
+## Install
 
-Use two `!` characters at the end of a line and call it to get extended prompts with command comments or a brief syntax example.
-
-```shell
-/home/lifailon [0.009s] > test !!
-# test
-# Check file types and compare values.
-# Returns 0 if the condition evaluates to true, 1 if it evaluates to false.
-# More information: <https://www.gnu.org/software/coreutils/test>.
-
-# Test if a given variable is equal to a given string:
-test "$MY_VAR" == "/bin/zsh"
-
-# Test if a given variable is empty:
-test -z "$GIT_BRANCH"
-
-# Test if a file exists:
-test -f "path/to/file_or_directory"
-
-# Test if a directory does not exist:
-test ! -d "path/to/directory"
-
-# If A is true, then do B, or C in the case of an error (notice that C may run even if A fails):
-test condition && echo "true" || echo "false"
-
-/home/lifailon [0.009s] > js function !!
- (function(){
-   // code
- })();
-
- !function(){
-   // code
- }();
-
- function(){
-   // code
- }();
-
-```
-
-### 💡 To do:
-
-- [ ] Process all commands in **one persistent bash process** (for example, using `pexpect`).
-- [ ] Automatic addition of options for commands after the `-` character at the end of a line (for example, using `compgen`).
-
-### ⌨️ Hotkeys:
-
-- `right` – select a command without executing it, which is convenient for continuing recording or moving to the next directory to quickly display its contents.
-- `backspace` - in addition to deleting, updates the history to reflect the changes.
-- `ctrl+c` - clears the current input line (buffer) without moving to a new line and does not terminate the executed command (has no effect on stopping a running program, which can also be interrupted).
-- `ctrl+l` - completely clears the output console without affecting the input console and without changing the last execution command.
-- `ctrl+q` - hides the drop-down list until the next input.
-
----
-
-### 🚀 Install from PyPi
-
-For quick installation on your system, use the PyPi package manager:
+For quick installation on your system, use the [PyPi](https://pypi.org/project/intellishell) package manager:
 
 ```shell
-pip install intellishell
+pip install --break-system-packages intellishell
 ```
 
 To run use the command:
@@ -111,37 +35,40 @@ To run use the command:
 insh
 ```
 
-### 🔨 Install from GitHub
+## Completions
 
-To work, you need to install the Python [prompt-toolkit](https://github.com/prompt-toolkit/python-prompt-toolkit) library on the system, which is responsible for creating a drop-down list:
+- History filtering (takes into account the order of execution with the exception of duplicates) and running the selected command by pressing the `Enter` key from the drop-down list or selecting it using the `right`.
+- Regular expression support when filtering based on the position of the entered phrases in the command using the `^` symbol at the beginning or end of the line (by default, the search is performed regardless of the position of the entered phrases separated by spaces, like `fzf`).
+- Quickly navigate through directories without leaving the current input line, as well as select files for reading or copying.
+- Displays the execution time of the last executed command and the full path to the current directory.
+- Supports completion of all available variables of the current session via the `$` symbol, as well as executable commands via the `!` symbol.
+- Search based on the output of the last executed command when the `@` symbol is used at the beginning of the input line.
+- Integration with [cheat.sh](https://cheat.sh) to output cheat sheets of the last entered command in a line via the `!` symbol.
 
-```shell
-pip install prompt_toolkit
-```
+To read the output of the last command, a second thread is used. To compare performance on my 1 core system I used `cat` to read the output of a 160k lines file which takes on average 4 seconds, when using two threads the reading time increases on 350 milliseconds.
 
-If you have any difficulties with installation, please refer to the [official manual](https://python-prompt-toolkit.readthedocs.io/en/stable/pages/getting_started.html#installation).
+## Hotkeys
 
-Other dependencies in the form of external libraries are not required.
+- `right` – select a command without executing it, which is convenient for continuing recording or moving to the next directory to quickly display its contents.
+- `backspace` - in addition to deleting, updates the history to reflect the changes.
+- `ctrl+c` - clears the current input line (buffer) without moving to a new line and does not terminate the executed command (has no effect on stopping a running program, which can also be interrupted).
+- `ctrl+l` - completely clears the output console without affecting the input console and without changing the last execution command.
+- `ctrl+q` - hides the drop-down list until the next input.
 
-Download the script to the system and set access rights:
+## Issues
 
-```shell
-mkdir -p ~/.local/bin
-curl -s https://raw.githubusercontent.com/Lifailon/intellishell/rsa/src/insh.py -o ~/.local/bin/insh
-chmod +x ~/.local/bin/insh
-```
+Because execution of each individual command occurs in external and independent processes, some actions may not perform as you expect.
 
-Add the directory with the executables to the `PATH` environment variable, if not already done:
+Known issues and limitations:
 
-```shell
-export PATH="$HOME/.local/bin:$PATH"
-source ~/.bashrc
-```
+- Multiline input is not supported.
+- Interrupting some commands may not return the final result (for example, `ping` will not return statistics).
+- Most interactive commands (which require input from user) may not work reliably.
 
-To run, use the `insh` command. If you get errors, simply change in **hebang** the version of the Python interpreter for which the **prompt-toolkit** library was installed:
+## Backlog
 
-```shell
-pythonVersion=python3.10
-sed -i '1s|^.*|#!/usr/bin/env '"$pythonVersion"'|' ~/.local/bin/insh
-insh
-```
+- [x] Passing variables and functions between command calls is supported.
+- [x] Added support for some interactive programs (e.g. `nano`, `vi/vim`, `top/htop`, `mc/mcedit`).
+- [ ] Autocomplete parameters (flags/keys) for all commands (using source bash-completion and declare functions).
+
+To fully utilize autocompletion for commands, it is recommended to use [inshellisense](https://github.com/microsoft/inshellisense) or [fzf-obc](https://github.com/rockandska/fzf-obc).

@@ -2,14 +2,14 @@ from setuptools import setup
 
 setup(
     name="intellishell",
-    version="0.4.0",
+    version="0.5.0",
     package_dir={"": "src"},
     py_modules=["insh"],
     install_requires=[
         "prompt_toolkit"
     ],
     author="Lifailon",
-    description="This is a handler that runs on top of the Bash shell and implements command autocomplete using a dropdown list in real time.",
+    description="This is a handler running on top of the Bash shell that implements real-time command history completion from a drop-down list.",
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
     url="https://github.com/Lifailon/intellishell",
